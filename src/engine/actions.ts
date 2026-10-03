@@ -1,7 +1,7 @@
 import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './types'
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
-import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain } from './state'
+import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
 import { attack, declareBlock, passBlock, useCounter, passCounter } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
@@ -58,6 +58,7 @@ function passPhase(state: GameState, action: PassAction): ApplyResult {
   const events: GameEvent[] = []
 
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   return { state: endTurn(state, events), events }
 
@@ -66,6 +67,7 @@ function passPhase(state: GameState, action: PassAction): ApplyResult {
 
 function playCharacter(state: GameState, action: PlayAction): ApplyResult {
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   const player = state.players[action.player]
   const card   = player.hand.find(candidate => candidate.instanceId === action.instanceId)
@@ -104,6 +106,7 @@ function playCharacter(state: GameState, action: PlayAction): ApplyResult {
 
 function attachDon(state: GameState, action: AttachAction): ApplyResult {
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   const player   = state.players[action.player]
   const isLeader = action.target === 'leader'

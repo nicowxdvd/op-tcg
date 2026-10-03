@@ -42,6 +42,13 @@ export function requireMain(state: GameState, player: PlayerId): void {
 }
 
 
+export function requireNoBattle(state: GameState): void {
+  if (state.battle)
+    throw new Error('Hay una batalla en curso')
+
+}
+
+
 export function mulliganDecider(state: GameState): PlayerId {
   return state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
 

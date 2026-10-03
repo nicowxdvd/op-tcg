@@ -139,7 +139,9 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
   }
 
-  return { ...state, battle: null }
+  events.push({ type: 'GameOver', winner: battle.attackerPlayer })
+
+  return { ...state, phase: 'gameOver', winner: battle.attackerPlayer, battle: null }
 
 }
 
