@@ -1,6 +1,6 @@
 # SPEC 01 — Scaffold del proyecto (Vite + TypeScript + Phaser 4 + Vitest)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** ninguna
 > **Fecha:** 2026-10-02
 > **Objetivo:** Dejar un repo git con Gitflow y un proyecto Vite + TypeScript + Phaser 4 + Vitest que arranca, compila y corre un test trivial.
