@@ -1,30 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
-import { createGame } from '../../src/engine/state'
-import { buildDeck, defs, LEADER_ID } from './fixtures'
-import type { GameState, PlayerId } from '../../src/engine/types'
-
-function startGame(seed = 5): GameState {
-  const created = createGame({ seed, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
-  const second  = created.first === 'p1' ? 'p2' : 'p1'
-  const decided = apply(created, { type: 'Mulligan', player: created.first, redraw: false }).state
-
-  return apply(decided, { type: 'Mulligan', player: second, redraw: false }).state
-
-}
-
-
-function pass(state: GameState) {
-  return apply(state, { type: 'PassPhase', player: state.active })
-
-}
-
-
-function other(id: PlayerId): PlayerId {
-  return id === 'p1' ? 'p2' : 'p1'
-
-}
-
+import { newGame, other, pass, startGame, withPlayer } from './helpers'
 
 describe('turno 1', () => {
 
@@ -146,9 +122,8 @@ describe('refresh', () => {
   it('devuelve a donActive el DON!! descansado y el adjunto, y activa Leader y Characters', () => {
     const start  = startGame()
     const id     = start.first
-    const player = start.players[id]
-    const card   = player.hand[0]
-    const staged: GameState = { ...start, players: { ...start.players, [id]: { ...player, donActive: 0, donRested: 2, leaderRested: true, leaderAttachedDon: 1, characters: [{ card, rested: true, attachedDon: 2, playedTurn: 1 }] } } }
+    const card   = start.players[id].hand[0]
+    const staged = withPlayer(start, id, { donActive: 0, donRested: 2, leaderRested: true, leaderAttachedDon: 1, characters: [{ card, rested: true, attachedDon: 2, playedTurn: 1 }] })
     const after  = pass(pass(staged).state).state
     const result = after.players[id]
 
@@ -170,8 +145,7 @@ describe('mazo vacío', () => {
   it('robar con el mazo vacío deja al rival como ganador y la fase en gameOver', () => {
     const start  = startGame()
     const id     = start.first
-    const staged: GameState = { ...start, players: { ...start.players, [id]: { ...start.players[id], deck: [] } } }
-    const after  = pass(pass(staged).state)
+    const after  = pass(pass(withPlayer(start, id, { deck: [] })).state)
 
     expect(after.state.phase).toBe('gameOver')
     expect(after.state.winner).toBe(other(id))
@@ -182,10 +156,8 @@ describe('mazo vacío', () => {
 
 
   it('el segundo jugador también pierde si no puede robar en su turno 2', () => {
-    const start  = startGame()
-    const id     = other(start.first)
-    const staged: GameState = { ...start, players: { ...start.players, [id]: { ...start.players[id], deck: [] } } }
-    const after  = pass(staged).state
+    const start = startGame()
+    const after = pass(withPlayer(start, other(start.first), { deck: [] })).state
 
     expect(after.phase).toBe('gameOver')
     expect(after.winner).toBe(start.first)
@@ -194,9 +166,9 @@ describe('mazo vacío', () => {
 
 
   it('el primer jugador con mazo vacío no pierde en el turno 1 porque no roba', () => {
-    const created = createGame({ seed: 5, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+    const created = newGame()
     const first   = created.first
-    const staged: GameState = { ...created, players: { ...created.players, [first]: { ...created.players[first], deck: [] } } }
+    const staged  = withPlayer(created, first, { deck: [] })
     const decided = apply(staged, { type: 'Mulligan', player: first, redraw: false }).state
     const started = apply(decided, { type: 'Mulligan', player: other(first), redraw: false }).state
 
@@ -218,7 +190,7 @@ describe('PassPhase', () => {
 
 
   it('rechaza pasar fuera de la fase main', () => {
-    const created = createGame({ seed: 5, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+    const created = newGame()
 
     expect(() => apply(created, { type: 'PassPhase', player: created.active })).toThrow(/fase main/)
 
@@ -226,10 +198,8 @@ describe('PassPhase', () => {
 
 
   it('rechaza pasar con la partida terminada', () => {
-    const start  = startGame()
-    const id     = other(start.first)
-    const staged: GameState = { ...start, players: { ...start.players, [id]: { ...start.players[id], deck: [] } } }
-    const over   = pass(staged).state
+    const start = startGame()
+    const over  = pass(withPlayer(start, other(start.first), { deck: [] })).state
 
     expect(() => apply(over, { type: 'PassPhase', player: over.active })).toThrow(/fase main/)
 
