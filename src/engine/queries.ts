@@ -1,12 +1,52 @@
 import type { Action, GameState, PlayerId } from './types'
-import { MAX_CHARACTERS, mulliganDecider } from './state'
+import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
+
+function attackActions(state: GameState, playerId: PlayerId): Action[] {
+  if (state.turn <= 2)
+    return []
+
+  const player    = state.players[playerId]
+  const rival     = state.players[opponentOf(playerId)]
+  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && character.playedTurn !== state.turn).map(character => character.card.instanceId)]
+  const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
+
+  return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
+
+}
+
+
+function battleActions(state: GameState, playerId: PlayerId): Action[] {
+  const battle = state.battle!
+
+  if (playerId !== opponentOf(battle.attackerPlayer))
+    return []
+
+  const player = state.players[playerId]
+
+  if (battle.step === 'block') {
+    const blockers = player.characters.filter(character => !character.rested && state.defs[character.card.defId].keywords.includes('Blocker'))
+
+    return [...blockers.map((character): Action => ({ type: 'DeclareBlock', player: playerId, blockerId: character.card.instanceId })), { type: 'PassBlock', player: playerId }]
+
+  }
+
+  const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].counter > 0)
+
+  return [...counters.map((card): Action => ({ type: 'UseCounter', player: playerId, instanceId: card.instanceId })), { type: 'PassCounter', player: playerId }]
+
+}
+
 
 export function getLegalActions(state: GameState, playerId: PlayerId): Action[] {
   if (state.phase === 'mulligan')
     return mulliganDecider(state) === playerId ? [{ type: 'Mulligan', player: playerId, redraw: false }, { type: 'Mulligan', player: playerId, redraw: true }] : []
-  if (state.phase !== 'main' || playerId !== state.active)
+  if (state.phase !== 'main')
+    return []
+  if (state.battle)
+    return battleActions(state, playerId)
+  if (playerId !== state.active)
     return []
 
   const player   = state.players[playerId]
@@ -16,7 +56,7 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
   const targets  = player.donActive > 0 ? ['leader', ...player.characters.map(character => character.card.instanceId)] : []
   const attaches = targets.map((target): Action => ({ type: 'AttachDon', player: playerId, target }))
 
-  return [...plays, ...attaches, { type: 'PassPhase', player: playerId }]
+  return [...plays, ...attaches, ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
 
 }
 
