@@ -14,10 +14,11 @@ export interface GameConfig {
 
 }
 
-export const DECK_SIZE  = 50
-export const MAX_COPIES = 4
-export const DON_TOTAL  = 10
-export const HAND_SIZE  = 5
+export const DECK_SIZE      = 50
+export const MAX_COPIES     = 4
+export const DON_TOTAL      = 10
+export const HAND_SIZE      = 5
+export const MAX_CHARACTERS = 5
 
 interface BuiltPlayer {
   state: PlayerState
