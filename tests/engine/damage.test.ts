@@ -123,6 +123,23 @@ describe('daño a un Character', () => {
 })
 
 
+describe('inmutabilidad', () => {
+
+  it('resolver el daño no muta el estado de entrada', () => {
+    const s        = stage()
+    const attacked = apply(s.state, { type: 'Attack', player: s.attacker, attacker: 'leader', target: `${s.defender}-t2` }).state
+    const passed   = apply(attacked, { type: 'PassBlock', player: s.defender }).state
+    const snapshot = JSON.stringify(passed)
+
+    apply(passed, { type: 'PassCounter', player: s.defender })
+
+    expect(JSON.stringify(passed)).toBe(snapshot)
+
+  })
+
+})
+
+
 describe('objetivo ausente', () => {
 
   it('termina la batalla sin daño', () => {
