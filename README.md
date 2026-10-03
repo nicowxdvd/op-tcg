@@ -1,0 +1,64 @@
+# One Piece TCG — Grand Line en el navegador 🏴‍☠️
+
+Un simulador web del **One Piece Card Game** para aprender a jugar. La idea: sentarte a la mesa contra una IA local, con ayudas en pantalla, hasta que las reglas te salgan solas. Más adelante, nakamas online.
+
+> "¡Voy a ser el Rey de los Piratas!" — y también a ganar mi primera partida de TCG.
+
+## Estado de la travesía
+
+| Etapa | Spec | Estado |
+|-------|------|--------|
+| Scaffold (Vite + Phaser 4 + Vitest) | `01-scaffold` | Zarpó (implementado) |
+| Motor base | `02-motor-base` | En el mapa (borrador) |
+| Batalla | `03-batalla` | En el mapa (borrador) |
+| Efectos y keywords | `04-efectos-keywords` | En el mapa |
+| Datos de cartas | `05-datos` | En el mapa (borrador) |
+| UI con Phaser | `06-ui-phaser` | En el mapa |
+| Modo aprendizaje | `07-modo-aprendizaje` | En el mapa |
+| IA simple | `08-ia-simple` | En el mapa |
+| Pulido | `09-pulido` | En el mapa |
+| Efectos ST-01 / ST-02 | `10-efectos-cartas-st01-st02` | En el mapa |
+
+Por ahora el juego solo muestra la escena `Boot`. El resto del tesoro está por descubrir.
+
+## Tripulación (stack)
+
+- **Phaser 4**: escenas, input, tweens, assets (el barco).
+- **TypeScript**: todo tipado.
+- **Vite**: servidor de desarrollo y build.
+- **Vitest**: tests del motor.
+
+## Zarpar
+
+```bash
+npm install
+npm run dev        # servidor de desarrollo
+npm run build      # typecheck + build de producción
+npm test           # tests con Vitest
+npm run typecheck  # solo tsc
+```
+
+## Mapa del proyecto
+
+```
+src/
+  main.ts        # punto de entrada, configura Phaser
+  scenes/        # escenas de Phaser (Boot por ahora)
+  engine/        # motor de reglas (TypeScript puro, sin Phaser)
+tests/           # tests del motor y de humo
+specs/           # una spec por etapa, con estado Borrador/Aprobado/Implementado
+```
+
+## Filosofía de diseño
+
+- **El motor de reglas es independiente de Phaser.** Es TypeScript puro y testeable: `apply(state, action)` devuelve un estado nuevo, sin mutar el anterior. La UI solo envía acciones y anima eventos.
+- **El mismo motor servirá para el online.** Un servidor autoritativo lo reutilizará tal cual cuando llegue el multijugador.
+- **Specs primero.** Cada etapa se escribe como spec en `specs/` antes de programarla.
+
+## Flujo de trabajo
+
+Gitflow: `feature/*` y `bugfix/*` salen de `develop`; `release/*` y `hotfix/*` salen de `main`. Nada se commitea directo a `main` ni `develop`.
+
+## Aviso
+
+Proyecto personal y sin fines de lucro, hecho para aprender. Las cartas e imágenes de One Piece Card Game pertenecen a sus dueños (Bandai / Eiichiro Oda / Shueisha / Toei Animation). Las imágenes no se publican en el repo.
