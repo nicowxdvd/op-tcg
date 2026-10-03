@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { apply } from '../../src/engine/actions'
 import { createGame, type GameConfig } from '../../src/engine/state'
 import { buildDeck, buildDeckWith, defs, FOREIGN_ID, LEADER_ID, OTHER_LEADER_ID } from './fixtures'
 
@@ -178,6 +179,108 @@ describe('createGame: estado inicial', () => {
     createGame(config)
 
     expect(config).toEqual(copy)
+
+  })
+
+})
+
+
+describe('mulligan', () => {
+  const ids = (cards: { instanceId: string }[]) => cards.map(card => card.instanceId)
+
+  it('conservar deja la mano igual y marca la decisión', () => {
+    const state  = createGame(makeConfig(5))
+    const result = apply(state, { type: 'Mulligan', player: state.first, redraw: false })
+    const player = result.state.players[state.first]
+
+    expect(ids(player.hand)).toEqual(ids(state.players[state.first].hand))
+    expect(player.mulliganDone).toBe(true)
+    expect(result.state.phase).toBe('mulligan')
+    expect(result.events).toEqual([{ type: 'MulliganDecided', player: state.first, redraw: false }])
+
+  })
+
+
+  it('rehacer devuelve la mano, baraja y roba 5 sin perder cartas', () => {
+    const state  = createGame(makeConfig(5))
+    const before = state.players[state.first]
+    const result = apply(state, { type: 'Mulligan', player: state.first, redraw: true })
+    const after  = result.state.players[state.first]
+
+    expect(after.hand).toHaveLength(5)
+    expect(after.deck).toHaveLength(45)
+    expect(ids(after.hand)).not.toEqual(ids(before.hand))
+    expect(ids([...after.hand, ...after.deck]).sort()).toEqual(ids([...before.hand, ...before.deck]).sort())
+    expect(result.state.seed).not.toBe(state.seed)
+
+  })
+
+
+  it('decide primero el primer jugador y después el rival', () => {
+    const state  = createGame(makeConfig(5))
+    const second = state.first === 'p1' ? 'p2' : 'p1'
+
+    expect(() => apply(state, { type: 'Mulligan', player: second, redraw: false })).toThrow(/Le toca decidir/)
+
+    const afterFirst = apply(state, { type: 'Mulligan', player: state.first, redraw: false }).state
+
+    expect(() => apply(afterFirst, { type: 'Mulligan', player: state.first, redraw: false })).toThrow(/Le toca decidir/)
+    expect(() => apply(afterFirst, { type: 'Mulligan', player: second, redraw: false })).not.toThrow()
+
+  })
+
+
+  it('rechaza el mulligan fuera de la fase mulligan', () => {
+    const state = createGame(makeConfig(5))
+    const first = apply(state, { type: 'Mulligan', player: state.first, redraw: false }).state
+    const done  = apply(first, { type: 'Mulligan', player: state.first === 'p1' ? 'p2' : 'p1', redraw: true }).state
+
+    expect(() => apply(done, { type: 'Mulligan', player: done.first, redraw: false })).toThrow(/fase mulligan/)
+
+  })
+
+
+  it('al decidir ambos coloca Life igual a leader.life y empieza el turno 1', () => {
+    const state  = createGame(makeConfig(9))
+    const second = state.first === 'p1' ? 'p2' : 'p1'
+    const first  = apply(state, { type: 'Mulligan', player: state.first, redraw: true }).state
+    const result = apply(first, { type: 'Mulligan', player: second, redraw: false })
+
+    for (const id of ['p1', 'p2'] as const) {
+      expect(result.state.players[id].life).toHaveLength(5)
+      expect(result.state.players[id].hand).toHaveLength(5)
+      expect(result.state.players[id].deck).toHaveLength(40)
+    }
+
+    expect(result.state.turn).toBe(1)
+    expect(result.state.active).toBe(state.first)
+    expect(result.state.phase).toBe('refresh')
+    expect(result.events.map(event => event.type)).toEqual(['MulliganDecided', 'GameStarted', 'PhaseChanged'])
+
+  })
+
+
+  it('la Life sale del tope del mazo y no repite cartas', () => {
+    const state  = createGame(makeConfig(9))
+    const second = state.first === 'p1' ? 'p2' : 'p1'
+    const first  = apply(state, { type: 'Mulligan', player: state.first, redraw: false }).state
+    const result = apply(first, { type: 'Mulligan', player: second, redraw: false }).state
+    const player = result.players.p1
+    const before = state.players.p1
+
+    expect(ids(player.life)).toEqual(ids(before.deck.slice(0, 5)))
+    expect(ids([...player.hand, ...player.life, ...player.deck]).sort()).toEqual(ids([...before.hand, ...before.deck]).sort())
+
+  })
+
+
+  it('no muta el estado recibido', () => {
+    const state = createGame(makeConfig(5))
+    const copy  = structuredClone(state)
+
+    apply(state, { type: 'Mulligan', player: state.first, redraw: true })
+
+    expect(state).toEqual(copy)
 
   })
 
