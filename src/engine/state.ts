@@ -33,6 +33,15 @@ export function opponentOf(player: PlayerId): PlayerId {
 }
 
 
+export function requireMain(state: GameState, player: PlayerId): void {
+  if (state.phase !== 'main')
+    throw new Error('Esta acción solo se puede hacer en la fase main')
+  if (player !== state.active)
+    throw new Error(`No es el turno de ${player}`)
+
+}
+
+
 export function mulliganDecider(state: GameState): PlayerId {
   return state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
 

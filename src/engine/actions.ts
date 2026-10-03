@@ -1,21 +1,13 @@
 import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './types'
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
-import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider } from './state'
+import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain } from './state'
+import { attack } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
 type AttachAction   = Extract<Action, { type: 'AttachDon' }>
 type PassAction     = Extract<Action, { type: 'PassPhase' }>
-
-function requireMain(state: GameState, player: PlayerId): void {
-  if (state.phase !== 'main')
-    throw new Error('Esta acción solo se puede hacer en la fase main')
-  if (player !== state.active)
-    throw new Error(`No es el turno de ${player}`)
-
-}
-
 
 function placeLife(state: GameState): GameState {
   const place = (player: PlayerId) => {
@@ -139,6 +131,8 @@ export function apply(state: GameState, action: Action): ApplyResult {
       return attachDon(state, action)
     case 'PassPhase':
       return passPhase(state, action)
+    case 'Attack':
+      return attack(state, action)
     default:
       throw new Error(`Acción desconocida: ${(action as { type: string }).type}`)
   }
