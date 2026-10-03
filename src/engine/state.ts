@@ -26,6 +26,12 @@ interface BuiltPlayer {
 }
 
 
+export function opponentOf(player: PlayerId): PlayerId {
+  return player === 'p1' ? 'p2' : 'p1'
+
+}
+
+
 export function validateDeck(defs: Record<string, CardDef>, deck: DeckConfig, player: PlayerId): void {
   const leader = defs[deck.leader]
   const copies: Record<string, number> = {}

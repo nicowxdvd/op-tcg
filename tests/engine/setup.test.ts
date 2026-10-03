@@ -254,8 +254,8 @@ describe('mulligan', () => {
 
     expect(result.state.turn).toBe(1)
     expect(result.state.active).toBe(state.first)
-    expect(result.state.phase).toBe('refresh')
-    expect(result.events.map(event => event.type)).toEqual(['MulliganDecided', 'GameStarted', 'PhaseChanged'])
+    expect(result.state.phase).toBe('main')
+    expect(result.events.map(event => event.type)).toEqual(['MulliganDecided', 'GameStarted', 'PhaseChanged', 'PhaseChanged', 'PhaseChanged', 'DonAdded', 'PhaseChanged'])
 
   })
 
