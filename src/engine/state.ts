@@ -33,6 +33,12 @@ export function opponentOf(player: PlayerId): PlayerId {
 }
 
 
+export function mulliganDecider(state: GameState): PlayerId {
+  return state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
+
+}
+
+
 export function validateDeck(defs: Record<string, CardDef>, deck: DeckConfig, player: PlayerId): void {
   const leader = defs[deck.leader]
   const copies: Record<string, number> = {}

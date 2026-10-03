@@ -1,7 +1,7 @@
 import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './types'
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
-import { HAND_SIZE, MAX_CHARACTERS, opponentOf } from './state'
+import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider } from './state'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
@@ -32,7 +32,7 @@ function placeLife(state: GameState): GameState {
 
 
 function mulligan(state: GameState, action: MulliganAction): ApplyResult {
-  const expected = state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
+  const expected = mulliganDecider(state)
 
   if (state.phase !== 'mulligan')
     throw new Error('El mulligan solo se decide en la fase mulligan')
