@@ -37,7 +37,7 @@ function playout(seed: number): GameState {
     if (state.phase === 'gameOver')
       return state
 
-    const actor   = state.phase === 'mulligan' ? mulliganDecider(state) : state.active
+    const actor   = state.phase === 'mulligan' ? mulliganDecider(state) : state.battle ? opponentOf(state.battle.attackerPlayer) : state.active
     const actions = getLegalActions(state, actor)
     const rolled  = nextInt(rng, actions.length)
 

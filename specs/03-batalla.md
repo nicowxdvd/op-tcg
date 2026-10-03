@@ -1,6 +1,6 @@
 # SPEC 03 — Batalla (ataque, Blocker, Counter, daño, Life, victoria)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 02
 > **Fecha:** 2026-10-02
 > **Objetivo:** Extender el motor de `src/engine/` para que un jugador pueda atacar y resolver la batalla completa (Block step, Counter step, daño), con pérdida de Life y victoria por golpear al Leader rival sin Life.
