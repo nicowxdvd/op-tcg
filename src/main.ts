@@ -1,3 +1,11 @@
-const root = document.getElementById('game')
+import * as Phaser from 'phaser'
+import { Boot } from './scenes/Boot'
 
-if (root) root.textContent = 'One Piece TCG'
+new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: 1280,
+  height: 720,
+  backgroundColor: '#1a1a2e',
+  scene: [Boot]
+})
