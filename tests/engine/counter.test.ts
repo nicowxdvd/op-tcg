@@ -105,7 +105,7 @@ describe('PassCounter', () => {
     const result              = apply(state, { type: 'PassCounter', player: defender })
 
     expect(result.state.battle).toBeNull()
-    expect(result.events).toEqual([{ type: 'CounterPassed', player: defender }])
+    expect(result.events[0]).toEqual({ type: 'CounterPassed', player: defender })
 
   })
 

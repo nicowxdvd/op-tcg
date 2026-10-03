@@ -1,5 +1,6 @@
-import type { Action, ApplyResult, BattleState, GameState, PlayerId } from './types'
+import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId } from './types'
 import { opponentOf, requireMain } from './state'
+import { getPower } from './queries'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
@@ -98,9 +99,55 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
 }
 
 
-export function passCounter(state: GameState, action: PassCounterAction): ApplyResult {
-  requireStep(state, action.player, 'counter')
+function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
+  const defender   = opponentOf(battle.attackerPlayer)
+  const rival      = state.players[defender]
+  const toLeader   = battle.target === 'leader'
+  const struck     = rival.characters.find(candidate => candidate.card.instanceId === battle.target)
+  const targetId   = toLeader ? rival.leader.instanceId : battle.target
+  const attackerId = battle.attacker === 'leader' ? state.players[battle.attackerPlayer].leader.instanceId : battle.attacker
 
-  return { state: { ...state, battle: null }, events: [{ type: 'CounterPassed', player: action.player }] }
+  if (!toLeader && !struck) {
+    events.push({ type: 'BattleEnded', connected: false })
+
+    return { ...state, battle: null }
+
+  }
+
+  const connected = getPower(state, attackerId) >= getPower(state, targetId) + battle.counterPower
+
+  events.push({ type: 'BattleEnded', connected })
+
+  if (!connected)
+    return { ...state, battle: null }
+
+  if (struck) {
+    events.splice(events.length - 1, 0, { type: 'CharacterKOd', player: defender, instanceId: struck.card.instanceId })
+
+    const knocked = { ...rival, characters: rival.characters.filter(candidate => candidate !== struck), trash: [...rival.trash, struck.card], donRested: rival.donRested + struck.attachedDon }
+
+    return { ...state, players: { ...state.players, [defender]: knocked }, battle: null }
+
+  }
+
+  if (rival.life.length > 0) {
+    events.splice(events.length - 1, 0, { type: 'LifeTaken', player: defender, instanceId: rival.life[0].instanceId })
+
+    const hurt = { ...rival, life: rival.life.slice(1), hand: [...rival.hand, rival.life[0]] }
+
+    return { ...state, players: { ...state.players, [defender]: hurt }, battle: null }
+
+  }
+
+  return { ...state, battle: null }
+
+}
+
+
+export function passCounter(state: GameState, action: PassCounterAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'counter')
+  const events: GameEvent[] = [{ type: 'CounterPassed', player: action.player }]
+
+  return { state: resolveDamage(state, battle, events), events }
 
 }
