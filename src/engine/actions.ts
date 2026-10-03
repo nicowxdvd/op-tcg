@@ -2,7 +2,7 @@ import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './type
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
 import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain } from './state'
-import { attack } from './battle'
+import { attack, declareBlock, passBlock } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
@@ -133,6 +133,10 @@ export function apply(state: GameState, action: Action): ApplyResult {
       return passPhase(state, action)
     case 'Attack':
       return attack(state, action)
+    case 'DeclareBlock':
+      return declareBlock(state, action)
+    case 'PassBlock':
+      return passBlock(state, action)
     default:
       throw new Error(`Acción desconocida: ${(action as { type: string }).type}`)
   }
