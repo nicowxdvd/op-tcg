@@ -4,13 +4,15 @@ import { opponentOf, requireMain } from './state'
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
 type PassBlockAction    = Extract<Action, { type: 'PassBlock' }>
+type UseCounterAction   = Extract<Action, { type: 'UseCounter' }>
+type PassCounterAction  = Extract<Action, { type: 'PassCounter' }>
 
 
-function requireBlockStep(state: GameState, player: PlayerId): BattleState {
-  if (!state.battle || state.battle.step !== 'block')
-    throw new Error('No hay una batalla en el paso block')
+function requireStep(state: GameState, player: PlayerId, step: BattleState['step']): BattleState {
+  if (!state.battle || state.battle.step !== step)
+    throw new Error(`No hay una batalla en el paso ${step}`)
   if (player !== opponentOf(state.battle.attackerPlayer))
-    throw new Error(`En el paso block decide ${opponentOf(state.battle.attackerPlayer)}, no ${player}`)
+    throw new Error(`En el paso ${step} decide ${opponentOf(state.battle.attackerPlayer)}, no ${player}`)
 
   return state.battle
 
@@ -49,7 +51,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
 
 
 export function declareBlock(state: GameState, action: DeclareBlockAction): ApplyResult {
-  const battle  = requireBlockStep(state, action.player)
+  const battle  = requireStep(state, action.player, 'block')
   const player  = state.players[action.player]
   const blocker = player.characters.find(candidate => candidate.card.instanceId === action.blockerId)
 
@@ -68,8 +70,37 @@ export function declareBlock(state: GameState, action: DeclareBlockAction): Appl
 
 
 export function passBlock(state: GameState, action: PassBlockAction): ApplyResult {
-  const battle = requireBlockStep(state, action.player)
+  const battle = requireStep(state, action.player, 'block')
 
   return { state: { ...state, battle: { ...battle, step: 'counter' } }, events: [{ type: 'BlockPassed', player: action.player }] }
+
+}
+
+
+export function useCounter(state: GameState, action: UseCounterAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'counter')
+  const player = state.players[action.player]
+  const picked = player.hand.find(candidate => candidate.instanceId === action.instanceId)
+  const def    = picked && state.defs[picked.defId]
+
+  if (!picked || !def)
+    throw new Error(`La carta ${action.instanceId} no está en la mano de ${action.player}`)
+  if (def.type !== 'Character')
+    throw new Error(`${def.name} no es un Character`)
+  if (def.counter <= 0)
+    throw new Error(`${def.name} no tiene counter`)
+
+  const updated      = { ...player, hand: player.hand.filter(candidate => candidate !== picked), trash: [...player.trash, picked] }
+  const counterPower = battle.counterPower + def.counter
+
+  return { state: { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }, events: [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }] }
+
+}
+
+
+export function passCounter(state: GameState, action: PassCounterAction): ApplyResult {
+  requireStep(state, action.player, 'counter')
+
+  return { state: { ...state, battle: null }, events: [{ type: 'CounterPassed', player: action.player }] }
 
 }
