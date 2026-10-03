@@ -1,21 +1,13 @@
 import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './types'
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
-import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider } from './state'
+import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
+import { attack, declareBlock, passBlock, useCounter, passCounter } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
 type AttachAction   = Extract<Action, { type: 'AttachDon' }>
 type PassAction     = Extract<Action, { type: 'PassPhase' }>
-
-function requireMain(state: GameState, player: PlayerId): void {
-  if (state.phase !== 'main')
-    throw new Error('Esta acción solo se puede hacer en la fase main')
-  if (player !== state.active)
-    throw new Error(`No es el turno de ${player}`)
-
-}
-
 
 function placeLife(state: GameState): GameState {
   const place = (player: PlayerId) => {
@@ -66,6 +58,7 @@ function passPhase(state: GameState, action: PassAction): ApplyResult {
   const events: GameEvent[] = []
 
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   return { state: endTurn(state, events), events }
 
@@ -74,6 +67,7 @@ function passPhase(state: GameState, action: PassAction): ApplyResult {
 
 function playCharacter(state: GameState, action: PlayAction): ApplyResult {
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   const player = state.players[action.player]
   const card   = player.hand.find(candidate => candidate.instanceId === action.instanceId)
@@ -112,6 +106,7 @@ function playCharacter(state: GameState, action: PlayAction): ApplyResult {
 
 function attachDon(state: GameState, action: AttachAction): ApplyResult {
   requireMain(state, action.player)
+  requireNoBattle(state)
 
   const player   = state.players[action.player]
   const isLeader = action.target === 'leader'
@@ -139,6 +134,16 @@ export function apply(state: GameState, action: Action): ApplyResult {
       return attachDon(state, action)
     case 'PassPhase':
       return passPhase(state, action)
+    case 'Attack':
+      return attack(state, action)
+    case 'DeclareBlock':
+      return declareBlock(state, action)
+    case 'PassBlock':
+      return passBlock(state, action)
+    case 'UseCounter':
+      return useCounter(state, action)
+    case 'PassCounter':
+      return passCounter(state, action)
     default:
       throw new Error(`Acción desconocida: ${(action as { type: string }).type}`)
   }

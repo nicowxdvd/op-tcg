@@ -33,6 +33,22 @@ export function opponentOf(player: PlayerId): PlayerId {
 }
 
 
+export function requireMain(state: GameState, player: PlayerId): void {
+  if (state.phase !== 'main')
+    throw new Error('Esta acción solo se puede hacer en la fase main')
+  if (player !== state.active)
+    throw new Error(`No es el turno de ${player}`)
+
+}
+
+
+export function requireNoBattle(state: GameState): void {
+  if (state.battle)
+    throw new Error('Hay una batalla en curso')
+
+}
+
+
 export function mulliganDecider(state: GameState): PlayerId {
   return state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
 
@@ -87,6 +103,6 @@ export function createGame(config: GameConfig): GameState {
   const p1    = buildPlayer('p1', config.decks.p1, roll.seed)
   const p2    = buildPlayer('p2', config.decks.p2, p1.seed)
 
-  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, active: first, turn: 1, phase: 'mulligan', winner: null }
+  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, active: first, turn: 1, phase: 'mulligan', winner: null, battle: null }
 
 }

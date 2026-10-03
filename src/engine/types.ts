@@ -4,6 +4,8 @@ export type Phase = 'mulligan' | 'refresh' | 'draw' | 'don' | 'main' | 'end' | '
 
 export type CardType = 'Leader' | 'Character' | 'Event' | 'Stage'
 
+export type Keyword = 'Blocker' | 'Rush' | 'DoubleAttack' | 'Banish'
+
 export interface CardDef {
   id: string
   name: string
@@ -13,6 +15,7 @@ export interface CardDef {
   counter: number
   life: number
   colors: string[]
+  keywords: Keyword[]
 
 }
 
@@ -47,6 +50,15 @@ export interface PlayerState {
 
 }
 
+export interface BattleState {
+  attacker: 'leader' | string
+  target: 'leader' | string
+  attackerPlayer: PlayerId
+  step: 'block' | 'counter'
+  counterPower: number
+
+}
+
 export interface GameState {
   seed: number
   defs: Record<string, CardDef>
@@ -56,6 +68,7 @@ export interface GameState {
   turn: number
   phase: Phase
   winner: PlayerId | null
+  battle: BattleState | null
 
 }
 
@@ -64,6 +77,11 @@ export type Action =
   | { type: 'PlayCharacter'; player: PlayerId; instanceId: string; replaceId?: string }
   | { type: 'AttachDon'; player: PlayerId; target: 'leader' | string }
   | { type: 'PassPhase'; player: PlayerId }
+  | { type: 'Attack'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
+  | { type: 'DeclareBlock'; player: PlayerId; blockerId: string }
+  | { type: 'PassBlock'; player: PlayerId }
+  | { type: 'UseCounter'; player: PlayerId; instanceId: string }
+  | { type: 'PassCounter'; player: PlayerId }
 
 export type GameEvent =
   | { type: 'MulliganDecided'; player: PlayerId; redraw: boolean }
@@ -74,6 +92,14 @@ export type GameEvent =
   | { type: 'CharacterPlayed'; player: PlayerId; instanceId: string }
   | { type: 'CharacterTrashed'; player: PlayerId; instanceId: string }
   | { type: 'DonAttached'; player: PlayerId; target: 'leader' | string }
+  | { type: 'AttackDeclared'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
+  | { type: 'BlockDeclared'; player: PlayerId; blockerId: string }
+  | { type: 'BlockPassed'; player: PlayerId }
+  | { type: 'CounterUsed'; player: PlayerId; instanceId: string; counterPower: number }
+  | { type: 'CounterPassed'; player: PlayerId }
+  | { type: 'LifeTaken'; player: PlayerId; instanceId: string }
+  | { type: 'CharacterKOd'; player: PlayerId; instanceId: string }
+  | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }
 
 export interface ApplyResult {
