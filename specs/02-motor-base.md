@@ -1,6 +1,6 @@
 # SPEC 02 — Motor base (tipos, setup, mulligan, fases, DON!!, Character, límite 5)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 01
 > **Fecha:** 2026-10-02
 > **Objetivo:** Tener en `src/engine/` un motor TypeScript puro y testeado que crea una partida, resuelve el mulligan y avanza los turnos con DON!!, permitiendo jugar Characters sin efectos con el límite de 5.
