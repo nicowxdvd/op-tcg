@@ -29,7 +29,7 @@ export type EffectStep =
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
-  | { op: 'search'; player: PlayerId; amount: number }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[] }
@@ -183,6 +183,11 @@ export type GameEvent =
   | { type: 'LifeBanished'; player: PlayerId; instanceId: string }
   | { type: 'CharacterKOd'; player: PlayerId; instanceId: string }
   | { type: 'EffectTriggered'; player: PlayerId; source: string; timing: Timing }
+  | { type: 'CharacterRested'; target: string }
+  | { type: 'CharacterActivated'; target: string }
+  | { type: 'CardSearched'; player: PlayerId; instanceId: string }
+  | { type: 'CardToLife'; player: PlayerId; instanceId: string }
+  | { type: 'CardToHand'; player: PlayerId; instanceId: string }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }
