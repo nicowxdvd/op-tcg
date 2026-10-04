@@ -2,10 +2,15 @@ import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './type
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
 import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
-import { attack, declareBlock, passBlock, useCounter, passCounter } from './battle'
+import { fireEffects } from './effects'
+import { choose, passChoice } from './effects/choice'
+import { activateEffect } from './effects/activate'
+import { attack, declareBlock, passBlock, useCounter, useCounterEvent, passCounter, revealTrigger, passTrigger } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
+type EventAction    = Extract<Action, { type: 'PlayEvent' }>
+type StageAction    = Extract<Action, { type: 'PlayStage' }>
 type AttachAction   = Extract<Action, { type: 'AttachDon' }>
 type PassAction     = Extract<Action, { type: 'PassPhase' }>
 
@@ -99,7 +104,66 @@ function playCharacter(state: GameState, action: PlayAction): ApplyResult {
 
   const updated = { ...player, hand: player.hand.filter(candidate => candidate !== card), trash: replaced ? [...player.trash, replaced.card] : player.trash, characters: [...player.characters.filter(character => character !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donActive: player.donActive - def.cost, donRested: player.donRested + def.cost + (replaced?.attachedDon ?? 0) }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: updated } }, events }
+  const next = { ...state, players: { ...state.players, [action.player]: updated } }
+
+  return { state: fireEffects(next, 'onPlay', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events), events }
+
+}
+
+
+function pickFromHand(state: GameState, player: PlayerId, instanceId: string, type: 'Event' | 'Stage') {
+  const hand = state.players[player].hand
+  const card = hand.find(candidate => candidate.instanceId === instanceId)
+  const def  = card && state.defs[card.defId]
+
+  if (!card || !def)
+    throw new Error(`La carta ${instanceId} no está en la mano de ${player}`)
+  if (def.type !== type)
+    throw new Error(`${def.name} no es un ${type}`)
+  if (state.players[player].donActive < def.cost)
+    throw new Error(`DON!! insuficiente: cost ${def.cost}, activos ${state.players[player].donActive}`)
+
+  return { card, def }
+
+}
+
+
+function playEvent(state: GameState, action: EventAction): ApplyResult {
+  requireMain(state, action.player)
+  requireNoBattle(state)
+
+  const { card, def } = pickFromHand(state, action.player, action.instanceId, 'Event')
+  const player        = state.players[action.player]
+
+  if (!(state.effects[card.defId] ?? []).some(effect => effect.timing === 'main'))
+    throw new Error(`${def.name} no tiene efecto [Main]`)
+
+  const events: GameEvent[] = [{ type: 'EventPlayed', player: action.player, instanceId: card.instanceId }]
+  const updated             = { ...player, hand: player.hand.filter(candidate => candidate !== card), trash: [...player.trash, card], donActive: player.donActive - def.cost, donRested: player.donRested + def.cost }
+  const next                = { ...state, players: { ...state.players, [action.player]: updated } }
+
+  return { state: fireEffects(next, 'main', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events), events }
+
+}
+
+
+function playStage(state: GameState, action: StageAction): ApplyResult {
+  requireMain(state, action.player)
+  requireNoBattle(state)
+
+  const { card, def } = pickFromHand(state, action.player, action.instanceId, 'Stage')
+  const player        = state.players[action.player]
+  const events: GameEvent[] = []
+
+  if (player.stage)
+    events.push({ type: 'StageTrashed', player: action.player, instanceId: player.stage.instanceId })
+
+  events.push({ type: 'StagePlayed', player: action.player, instanceId: card.instanceId })
+
+  const updated = { ...player, hand: player.hand.filter(candidate => candidate !== card), stage: card, trash: player.stage ? [...player.trash, player.stage] : player.trash, donActive: player.donActive - def.cost, donRested: player.donRested + def.cost }
+  const next    = { ...state, players: { ...state.players, [action.player]: updated } }
+
+  return { state: fireEffects(next, 'onPlay', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events), events }
 
 }
 
@@ -125,11 +189,18 @@ function attachDon(state: GameState, action: AttachAction): ApplyResult {
 
 
 export function apply(state: GameState, action: Action): ApplyResult {
+  if (state.pending && action.type !== 'Choose' && action.type !== 'PassChoice')
+    throw new Error('Hay una decisión pendiente')
+
   switch (action.type) {
     case 'Mulligan':
       return mulligan(state, action)
     case 'PlayCharacter':
       return playCharacter(state, action)
+    case 'PlayEvent':
+      return playEvent(state, action)
+    case 'PlayStage':
+      return playStage(state, action)
     case 'AttachDon':
       return attachDon(state, action)
     case 'PassPhase':
@@ -142,8 +213,20 @@ export function apply(state: GameState, action: Action): ApplyResult {
       return passBlock(state, action)
     case 'UseCounter':
       return useCounter(state, action)
+    case 'UseCounterEvent':
+      return useCounterEvent(state, action)
+    case 'RevealTrigger':
+      return revealTrigger(state, action)
+    case 'PassTrigger':
+      return passTrigger(state, action)
     case 'PassCounter':
       return passCounter(state, action)
+    case 'ActivateEffect':
+      return activateEffect(state, action)
+    case 'Choose':
+      return choose(state, action)
+    case 'PassChoice':
+      return passChoice(state, action)
     default:
       throw new Error(`Acción desconocida: ${(action as { type: string }).type}`)
   }

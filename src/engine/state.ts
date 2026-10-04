@@ -1,4 +1,4 @@
-import type { CardDef, CardInstance, GameState, PlayerId, PlayerState } from './types'
+import type { CardDef, CardInstance, EffectRegistry, GameState, PlayerId, PlayerState } from './types'
 import { nextInt, shuffle } from './rng'
 
 export interface DeckConfig {
@@ -11,6 +11,7 @@ export interface GameConfig {
   seed: number
   defs: Record<string, CardDef>
   decks: Record<PlayerId, DeckConfig>
+  effects?: EffectRegistry
 
 }
 
@@ -87,7 +88,7 @@ function buildPlayer(player: PlayerId, deck: DeckConfig, seed: number): BuiltPla
   const cards    = deck.cards.map((defId, i): CardInstance => ({ instanceId: `${player}-${i}`, defId, owner: player }))
   const shuffled = shuffle(cards, seed)
   const leader   = { instanceId: `${player}-leader`, defId: deck.leader, owner: player }
-  const state    = { leader, deck: shuffled.items.slice(HAND_SIZE), hand: shuffled.items.slice(0, HAND_SIZE), life: [], trash: [], characters: [], leaderRested: false, leaderAttachedDon: 0, donDeck: DON_TOTAL, donActive: 0, donRested: 0, mulliganDone: false }
+  const state    = { leader, deck: shuffled.items.slice(HAND_SIZE), hand: shuffled.items.slice(0, HAND_SIZE), life: [], trash: [], characters: [], leaderRested: false, leaderAttachedDon: 0, donDeck: DON_TOTAL, donActive: 0, donRested: 0, stage: null, mulliganDone: false }
 
   return { state, seed: shuffled.seed }
 
@@ -103,6 +104,6 @@ export function createGame(config: GameConfig): GameState {
   const p1    = buildPlayer('p1', config.decks.p1, roll.seed)
   const p2    = buildPlayer('p2', config.decks.p2, p1.seed)
 
-  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, active: first, turn: 1, phase: 'mulligan', winner: null, battle: null }
+  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, active: first, turn: 1, phase: 'mulligan', winner: null, battle: null, effects: config.effects ?? {}, pending: null, effectQueue: [], modifiers: [], oncePerTurnUsed: [] }
 
 }
