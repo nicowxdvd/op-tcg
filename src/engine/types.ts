@@ -29,10 +29,10 @@ export type EffectStep =
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
-  | { op: 'search'; player: PlayerId; amount: number; type?: CardType }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; pick?: string | null }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
-  | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[] }
+  | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {
   state: GameState
@@ -82,6 +82,8 @@ export type ChoiceKind = 'target' | 'option' | 'trashFromHand' | 'orderDeck' | '
 export interface ResumeToken {
   source: string
   owner: PlayerId
+  then: EffectStep[]
+  otherwise: EffectStep[]
   rest: EffectStep[]
 
 }
@@ -164,6 +166,8 @@ export type Action =
   | { type: 'PassBlock'; player: PlayerId }
   | { type: 'UseCounter'; player: PlayerId; instanceId: string }
   | { type: 'PassCounter'; player: PlayerId }
+  | { type: 'Choose'; player: PlayerId; option: string }
+  | { type: 'PassChoice'; player: PlayerId }
 
 export type GameEvent =
   | { type: 'MulliganDecided'; player: PlayerId; redraw: boolean }
@@ -188,6 +192,9 @@ export type GameEvent =
   | { type: 'CardSearched'; player: PlayerId; instanceId: string }
   | { type: 'CardToLife'; player: PlayerId; instanceId: string }
   | { type: 'CardToHand'; player: PlayerId; instanceId: string }
+  | { type: 'ChoiceRequested'; player: PlayerId; kind: ChoiceKind; options: string[] }
+  | { type: 'ChoiceMade'; player: PlayerId; option: string }
+  | { type: 'ChoicePassed'; player: PlayerId }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }

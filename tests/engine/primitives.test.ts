@@ -109,9 +109,9 @@ describe('primitiva search', () => {
   }
 
 
-  it('toma la primera carta que cumple el tipo y manda el resto al fondo', () => {
+  it('toma la carta elegida y manda el resto al fondo', () => {
     const state  = deckWith(stage())
-    const result = run(state, { op: 'search', player: 'p1', amount: 3, type: 'Character' })
+    const result = run(state, { op: 'search', player: 'p1', amount: 3, type: 'Character', pick: 'p1-t92' })
     const mine   = result.state.players.p1
 
     expect(mine.hand.at(-1)?.instanceId).toBe('p1-t92')
@@ -122,9 +122,9 @@ describe('primitiva search', () => {
   })
 
 
-  it('sin carta que cumpla, la mano no cambia y las vistas van al fondo', () => {
+  it('sin elegir carta, la mano no cambia y las vistas van al fondo', () => {
     const state  = deckWith(stage())
-    const result = run(state, { op: 'search', player: 'p1', amount: 2, type: 'Event' })
+    const result = run(state, { op: 'search', player: 'p1', amount: 2, type: 'Event', pick: null })
 
     expect(result.state.players.p1.hand).toEqual(state.players.p1.hand)
     expect(result.state.players.p1.deck.map(item => item.instanceId)).toEqual(['p1-t93', 'p1-t94', 'p1-t91', 'p1-t92'])

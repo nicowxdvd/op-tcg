@@ -84,10 +84,14 @@ function setRested(state: GameState, target: string, rested: boolean, events: Ga
 }
 
 
-function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, events: GameEvent[]): GameState {
+function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, pick: string | null | undefined, events: GameEvent[]): GameState {
   const player = state.players[id]
   const top    = player.deck.slice(0, amount)
-  const found  = top.find(candidate => !type || state.defs[candidate.defId].type === type)
+  const found  = pick ? top.find(candidate => candidate.instanceId === pick && (!type || state.defs[candidate.defId].type === type)) : undefined
+
+  if (pick && !found)
+    throw new Error(`La carta ${pick} no está entre las ${amount} del tope o no cumple el tipo`)
+
   const rest   = top.filter(candidate => candidate !== found)
 
   if (found)
@@ -146,7 +150,7 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
     case 'activate':
       return setRested(state, step.target, false, events)
     case 'search':
-      return search(state, step.player, step.amount, step.type, events)
+      return search(state, step.player, step.amount, step.type, step.pick, events)
     case 'toLife':
       return toLife(state, step.player, step.instanceId, events)
     case 'toHand':

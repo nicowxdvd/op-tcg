@@ -1,8 +1,23 @@
-import type { GameEvent, GameState, Timing } from '../types'
+import type { EffectStep, GameEvent, GameState, Timing } from '../types'
+import { CHOICE } from './binding'
 import { executeStep } from './primitives'
 import { queueEffects, type EffectSource } from './timing'
 
+type SearchStep = Extract<EffectStep, { op: 'search' }>
+
 export type { EffectSource } from './timing'
+
+
+function expandSearch(state: GameState, step: SearchStep): EffectStep[] {
+  const top     = state.players[step.player].deck.slice(0, step.amount)
+  const options = top.filter(candidate => !step.type || state.defs[candidate.defId].type === step.type).map(candidate => candidate.instanceId)
+
+  if (!options.length)
+    return [{ ...step, pick: null }]
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: true, then: [{ ...step, pick: CHOICE }], otherwise: [{ ...step, pick: null }] }]
+
+}
 
 
 export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
@@ -10,14 +25,41 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
   while (next.effectQueue.length) {
     const [queued, ...rest] = next.effectQueue
+    let steps               = queued.steps
 
     next = { ...next, effectQueue: rest }
 
-    for (const step of queued.steps)
-      next = executeStep(next, step, queued, events)
+    while (steps.length) {
+      const [step, ...others] = steps
 
-    if (next.phase === 'gameOver')
-      return { ...next, effectQueue: [] }
+      if (step.op === 'search' && step.pick === undefined) {
+        steps = [...expandSearch(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'choose') {
+        if (!step.options.length) {
+          steps = others
+
+          continue
+
+        }
+
+        events.push({ type: 'ChoiceRequested', player: step.chooser, kind: step.kind, options: step.options })
+
+        return { ...next, pending: { player: step.chooser, kind: step.kind, options: step.options, optional: step.optional, resume: { source: queued.source, owner: queued.owner, then: step.then, otherwise: step.otherwise ?? [], rest: others } } }
+
+      }
+
+      next  = executeStep(next, step, queued, events)
+      steps = others
+
+      if (next.phase === 'gameOver')
+        return { ...next, effectQueue: [] }
+
+    }
 
   }
 
