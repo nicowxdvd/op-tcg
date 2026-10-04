@@ -36,7 +36,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn)
+  if (character && character.playedTurn === state.turn && !state.defs[character.card.defId].keywords.includes('Rush'))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)
@@ -99,6 +99,45 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
 }
 
 
+function dealLifeDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
+  const defender = opponentOf(battle.attackerPlayer)
+  const keywords = state.defs[attackerDefId(state, battle)].keywords
+  const banish   = keywords.includes('Banish')
+  const hits     = keywords.includes('DoubleAttack') ? 2 : 1
+  let next       = state
+
+  for (let hit = 0; hit < hits; hit++) {
+    const rival = next.players[defender]
+
+    if (!rival.life.length) {
+      events.push({ type: 'GameOver', winner: battle.attackerPlayer })
+
+      return { ...next, phase: 'gameOver', winner: battle.attackerPlayer, battle: null }
+
+    }
+
+    const [top, ...rest] = rival.life
+    const hurt           = banish ? { ...rival, life: rest, trash: [...rival.trash, top] } : { ...rival, life: rest, hand: [...rival.hand, top] }
+
+    events.splice(events.length - 1, 0, { type: banish ? 'LifeBanished' : 'LifeTaken', player: defender, instanceId: top.instanceId })
+
+    next = { ...next, players: { ...next.players, [defender]: hurt } }
+
+  }
+
+  return { ...next, battle: null }
+
+}
+
+
+function attackerDefId(state: GameState, battle: BattleState): string {
+  const player = state.players[battle.attackerPlayer]
+
+  return battle.attacker === 'leader' ? player.leader.defId : player.characters.find(candidate => candidate.card.instanceId === battle.attacker)!.card.defId
+
+}
+
+
 function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
   const defender   = opponentOf(battle.attackerPlayer)
   const rival      = state.players[defender]
@@ -130,18 +169,7 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
   }
 
-  if (rival.life.length > 0) {
-    events.splice(events.length - 1, 0, { type: 'LifeTaken', player: defender, instanceId: rival.life[0].instanceId })
-
-    const hurt = { ...rival, life: rival.life.slice(1), hand: [...rival.hand, rival.life[0]] }
-
-    return { ...state, players: { ...state.players, [defender]: hurt }, battle: null }
-
-  }
-
-  events.push({ type: 'GameOver', winner: battle.attackerPlayer })
-
-  return { ...state, phase: 'gameOver', winner: battle.attackerPlayer, battle: null }
+  return dealLifeDamage(state, battle, events)
 
 }
 

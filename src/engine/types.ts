@@ -180,6 +180,7 @@ export type GameEvent =
   | { type: 'CounterUsed'; player: PlayerId; instanceId: string; counterPower: number }
   | { type: 'CounterPassed'; player: PlayerId }
   | { type: 'LifeTaken'; player: PlayerId; instanceId: string }
+  | { type: 'LifeBanished'; player: PlayerId; instanceId: string }
   | { type: 'CharacterKOd'; player: PlayerId; instanceId: string }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }

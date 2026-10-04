@@ -9,7 +9,7 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
 
   const player    = state.players[playerId]
   const rival     = state.players[opponentOf(playerId)]
-  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && character.playedTurn !== state.turn).map(character => character.card.instanceId)]
+  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || state.defs[character.card.defId].keywords.includes('Rush'))).map(character => character.card.instanceId)]
   const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
 
   return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
