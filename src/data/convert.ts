@@ -7,7 +7,7 @@ const LEADING_KEYWORD = /^\s*\[(Rush|Blocker|Double Attack|Banish)\](?:\s*\([^)]
 
 
 function toNumber(id: string, field: string, value: string | number | null): number {
-  if (value === null || value === '')
+  if (value === null || value === '' || value === 'NULL')
     return 0
 
   const parsed = Number(value)

@@ -33,8 +33,10 @@ describe('cardFromApi', () => {
   })
 
 
-  it('convierte un Stage', () => {
-    expect(cardFromApi(api({ card_type: 'Stage', card_power: null })).type).toBe('Stage')
+  it('convierte un Stage con power "NULL" a 0', () => {
+    const def = cardFromApi(api({ card_type: 'Stage', card_power: 'NULL' }))
+
+    expect(def).toMatchObject({ type: 'Stage', power: 0 })
 
   })
 
