@@ -1,6 +1,6 @@
 # SPEC 05 — Datos (fetchCards, ST01 y ST02, mazos)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 02
 > **Fecha:** 2026-10-02
 > **Objetivo:** Tener un script que descarga las cartas de ST01 y ST02 de OPTCG API a JSON e imágenes locales, y un cargador que entrega al motor `CardDef` y mazos válidos de 50 cartas sin llamadas de red en runtime.
@@ -97,16 +97,16 @@ Reglas fijadas:
 
 ## Criterios de aceptación
 
-- [ ] `npm run fetch:cards` crea `src/data/cards/ST01.json` y `ST02.json` y las imágenes en `public/cards/`.
-- [ ] Una segunda ejecución no baja de nuevo imágenes existentes.
-- [ ] Si la API falla dos veces seguidas, el script termina con código distinto de 0 y no sobrescribe un JSON válido previo.
-- [ ] Cada carta de los JSON se convierte a `CardDef` sin error.
-- [ ] `st01.json` y `st02.json` tienen 1 Leader y 50 cartas, máximo 4 copias por id y solo colores del Leader.
-- [ ] `createGame` de SPEC 02 acepta `st01` contra `st02` usando solo `loadDefs()` y `loadDeck()`.
-- [ ] Los tests de esta spec pasan sin acceso a la red.
-- [ ] `git ls-files public/cards` no devuelve nada y `git ls-files src/data` incluye los JSON.
-- [ ] `npm run typecheck` y `npm test` terminan con código 0.
-- [ ] Ningún archivo bajo `src/engine/` importa `phaser` ni `src/data/`.
+- [x] `npm run fetch:cards` crea `src/data/cards/ST01.json` y `ST02.json` y las imágenes en `public/cards/`.
+- [x] Una segunda ejecución no baja de nuevo imágenes existentes.
+- [x] Si la API falla dos veces seguidas, el script termina con código distinto de 0 y no sobrescribe un JSON válido previo.
+- [x] Cada carta de los JSON se convierte a `CardDef` sin error.
+- [x] `st01.json` y `st02.json` tienen 1 Leader y 50 cartas, máximo 4 copias por id y solo colores del Leader.
+- [x] `createGame` de SPEC 02 acepta `st01` contra `st02` usando solo `loadDefs()` y `loadDeck()`.
+- [x] Los tests de esta spec pasan sin acceso a la red.
+- [x] `git ls-files public/cards` no devuelve nada y `git ls-files src/data` incluye los JSON.
+- [x] `npm run typecheck` y `npm test` terminan con código 0.
+- [x] Ningún archivo bajo `src/engine/` importa `phaser` ni `src/data/`.
 
 ---
 
@@ -119,6 +119,22 @@ Reglas fijadas:
 - **No:** deck builder, otros sets ni descarga automática en el arranque del juego.
 - **Sí:** conversión estricta con error por `type` desconocido. Un dato mal convertido en silencio rompe reglas más adelante.
 - **Sí:** los mazos se arman de la respuesta de `/api/decks/` y no a mano, para reproducir el Starter Deck oficial.
+
+---
+
+## Hallazgos de la implementación
+
+Diferencias entre lo que asumía esta spec y lo que devuelve la API (verificado el 2026-10-04):
+
+- **Composición de mazos:** `/api/decks/{set}/` devuelve las 17 cartas únicas del set, sin cantidades de copias. No existe un endpoint con la lista de 50. Las cantidades salen de One Piece Player.
+- **`st02.json`:** suma exacto 50 (Scalpel ×2 y Repel ×4 según la nota oficial de Bandai; Straw Sword ×2 por resta).
+- **`st01.json` no es la lista oficial:** las fuentes se contradicen y no hay una confirmada. Son 4 copias de los Characters 002 a 010, Brook ×2, Luffy 012 ×2, Zoro 013 ×2, y los tres Events y el Stage ×2. Es un mazo de práctica válido de 50 cartas. Se corrige cuando haya una fuente fiable.
+- **Valores numéricos:** `card_cost`, `card_power` y `life` llegan como string, `null` o el string `"NULL"` (el Stage `ST01-017` en `card_power`). `cardFromApi` convierte los tres casos a 0.
+- **Rutas:** `/api/sets/ST-01/` y `/api/decks/` dan error o 404. Solo se usan `/api/decks/{set}/` y `/api/allDonCards/`.
+- **Mezcla de sets:** una descarga sin pausa devolvió datos de ST-02 en la respuesta de ST-01. El script valida el `set_id` de cada carta.
+- **Imágenes:** las de cartas llegan como PNG con extensión `.jpg`. Los navegadores las abren igual.
+- **DON!!:** `/api/allDonCards/` trae 187 variantes y 4 sin imagen. Se bajan solo el genérico (`don_8`) y el de ST-01 (`don_3`). No hay DON!! de ST-02.
+- **Keywords deducidos:** solo cuentan los que abren el texto de la carta. `[DON!! x2] ... gains [Rush]` o `cannot activate [Blocker]` no son keywords propios.
 
 ---
 
