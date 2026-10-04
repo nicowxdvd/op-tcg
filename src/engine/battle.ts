@@ -1,11 +1,16 @@
 import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId } from './types'
 import { opponentOf, requireMain } from './state'
 import { getPower } from './queries'
+import { clearModifiers } from './effects/modifiers'
+import { fireEffects } from './effects'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
 type PassBlockAction    = Extract<Action, { type: 'PassBlock' }>
 type UseCounterAction   = Extract<Action, { type: 'UseCounter' }>
+type CounterEventAction = Extract<Action, { type: 'UseCounterEvent' }>
+type RevealAction       = Extract<Action, { type: 'RevealTrigger' }>
+type PassTriggerAction  = Extract<Action, { type: 'PassTrigger' }>
 type PassCounterAction  = Extract<Action, { type: 'PassCounter' }>
 
 
@@ -36,7 +41,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn)
+  if (character && character.playedTurn === state.turn && !state.defs[character.card.defId].keywords.includes('Rush'))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)
@@ -46,7 +51,10 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
   const rested = fromLeader ? { ...player, leaderRested: true } : { ...player, characters: player.characters.map(candidate => candidate === character ? { ...candidate, rested: true } : candidate) }
   const battle = { attacker: action.attacker, target: action.target, attackerPlayer: action.player, step: 'block' as const, counterPower: 0 }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: rested }, battle }, events: [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }] }
+  const events: GameEvent[] = [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }]
+  const source              = fromLeader ? { instanceId: player.leader.instanceId, defId: player.leader.defId, owner: action.player, attachedDon: player.leaderAttachedDon } : { instanceId: character!.card.instanceId, defId: character!.card.defId, owner: action.player, attachedDon: character!.attachedDon }
+
+  return { state: fireEffects({ ...state, players: { ...state.players, [action.player]: rested }, battle }, 'whenAttacking', source, events), events }
 
 }
 
@@ -99,6 +107,76 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
 }
 
 
+export function useCounterEvent(state: GameState, action: CounterEventAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'counter')
+  const player = state.players[action.player]
+  const picked = player.hand.find(candidate => candidate.instanceId === action.instanceId)
+  const def    = picked && state.defs[picked.defId]
+
+  if (!picked || !def)
+    throw new Error(`La carta ${action.instanceId} no está en la mano de ${action.player}`)
+  if (def.type !== 'Event')
+    throw new Error(`${def.name} no es un Event`)
+  if (!(state.effects[picked.defId] ?? []).some(effect => effect.timing === 'counter'))
+    throw new Error(`${def.name} no tiene efecto [Counter]`)
+  if (player.donActive < def.cost)
+    throw new Error(`DON!! insuficiente: cost ${def.cost}, activos ${player.donActive}`)
+
+  const counterPower        = battle.counterPower + def.counter
+  const events: GameEvent[] = [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }]
+  const updated             = { ...player, hand: player.hand.filter(candidate => candidate !== picked), trash: [...player.trash, picked], donActive: player.donActive - def.cost, donRested: player.donRested + def.cost }
+  const next                = { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }
+
+  return { state: fireEffects(next, 'counter', { instanceId: picked.instanceId, defId: picked.defId, owner: action.player, attachedDon: 0 }, events), events }
+
+}
+
+
+function dealLifeDamage(state: GameState, battle: BattleState, hits: number, banish: boolean, events: GameEvent[]): GameState {
+  const defender = opponentOf(battle.attackerPlayer)
+  let next       = state
+
+  for (let hit = 0; hit < hits; hit++) {
+    const rival = next.players[defender]
+
+    if (!rival.life.length) {
+      events.push({ type: 'GameOver', winner: battle.attackerPlayer })
+
+      return { ...next, phase: 'gameOver', winner: battle.attackerPlayer, battle: null }
+
+    }
+
+    const [top, ...rest] = rival.life
+    const triggers       = !banish && (state.effects[top.defId] ?? []).some(effect => effect.timing === 'trigger')
+    const hurt           = banish ? { ...rival, life: rest, trash: [...rival.trash, top] } : triggers ? { ...rival, life: rest } : { ...rival, life: rest, hand: [...rival.hand, top] }
+
+    events.splice(events.length - 1, 0, { type: banish ? 'LifeBanished' : 'LifeTaken', player: defender, instanceId: top.instanceId })
+
+    next = { ...next, players: { ...next.players, [defender]: hurt } }
+
+    if (triggers) {
+      events.pop()
+      events.push({ type: 'TriggerAvailable', player: defender, instanceId: top.instanceId })
+
+      return { ...next, battle: { ...battle, step: 'trigger', triggerCard: top, hitsLeft: hits - hit - 1 } }
+
+    }
+
+  }
+
+  return { ...next, battle: null }
+
+}
+
+
+function attackerDefId(state: GameState, battle: BattleState): string {
+  const player = state.players[battle.attackerPlayer]
+
+  return battle.attacker === 'leader' ? player.leader.defId : player.characters.find(candidate => candidate.card.instanceId === battle.attacker)!.card.defId
+
+}
+
+
 function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
   const defender   = opponentOf(battle.attackerPlayer)
   const rival      = state.players[defender]
@@ -126,22 +204,13 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
     const knocked = { ...rival, characters: rival.characters.filter(candidate => candidate !== struck), trash: [...rival.trash, struck.card], donRested: rival.donRested + struck.attachedDon }
 
-    return { ...state, players: { ...state.players, [defender]: knocked }, battle: null }
+    return fireEffects({ ...state, players: { ...state.players, [defender]: knocked }, battle: null }, 'onKO', { instanceId: struck.card.instanceId, defId: struck.card.defId, owner: defender, attachedDon: struck.attachedDon }, events)
 
   }
 
-  if (rival.life.length > 0) {
-    events.splice(events.length - 1, 0, { type: 'LifeTaken', player: defender, instanceId: rival.life[0].instanceId })
+  const keywords = state.defs[attackerDefId(state, battle)].keywords
 
-    const hurt = { ...rival, life: rival.life.slice(1), hand: [...rival.hand, rival.life[0]] }
-
-    return { ...state, players: { ...state.players, [defender]: hurt }, battle: null }
-
-  }
-
-  events.push({ type: 'GameOver', winner: battle.attackerPlayer })
-
-  return { ...state, phase: 'gameOver', winner: battle.attackerPlayer, battle: null }
+  return dealLifeDamage(state, battle, keywords.includes('DoubleAttack') ? 2 : 1, keywords.includes('Banish'), events)
 
 }
 
@@ -150,6 +219,58 @@ export function passCounter(state: GameState, action: PassCounterAction): ApplyR
   const battle = requireStep(state, action.player, 'counter')
   const events: GameEvent[] = [{ type: 'CounterPassed', player: action.player }]
 
-  return { state: resolveDamage(state, battle, events), events }
+  const resolved = resolveDamage(state, battle, events)
+
+  return { state: resolved.battle ? resolved : clearModifiers(resolved, 'thisBattle'), events }
+
+}
+
+
+function continueBattle(state: GameState, events: GameEvent[]): GameState {
+  const battle = state.battle!
+
+  events.push({ type: 'BattleEnded', connected: true })
+
+  const resolved = dealLifeDamage(state, battle, battle.hitsLeft ?? 0, false, events)
+
+  return resolved.battle ? resolved : clearModifiers(resolved, 'thisBattle')
+
+}
+
+
+export function resumeTrigger(state: GameState, events: GameEvent[]): GameState {
+  if (state.pending)
+    return state
+  if (state.phase === 'gameOver')
+    return { ...state, battle: null }
+  if (!state.battle || state.battle.step !== 'trigger' || state.battle.triggerCard)
+    return state
+
+  return continueBattle(state, events)
+
+}
+
+
+export function revealTrigger(state: GameState, action: RevealAction): ApplyResult {
+  const battle   = requireStep(state, action.player, 'trigger')
+  const card     = battle.triggerCard!
+  const player   = state.players[action.player]
+  const events: GameEvent[] = [{ type: 'TriggerRevealed', player: action.player, instanceId: card.instanceId }]
+  const next     = { ...state, players: { ...state.players, [action.player]: { ...player, trash: [...player.trash, card] } }, battle: { ...battle, triggerCard: undefined } }
+  const resolved = fireEffects(next, 'trigger', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events)
+
+  return { state: resumeTrigger(resolved, events), events }
+
+}
+
+
+export function passTrigger(state: GameState, action: PassTriggerAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'trigger')
+  const card   = battle.triggerCard!
+  const player = state.players[action.player]
+  const events: GameEvent[] = [{ type: 'TriggerPassed', player: action.player, instanceId: card.instanceId }]
+  const next   = { ...state, players: { ...state.players, [action.player]: { ...player, hand: [...player.hand, card] } }, battle: { ...battle, triggerCard: undefined } }
+
+  return { state: resumeTrigger(next, events), events }
 
 }

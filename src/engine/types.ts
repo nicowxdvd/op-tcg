@@ -19,6 +19,86 @@ export interface CardDef {
 
 }
 
+export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main'
+
+export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
+
+export type EffectStep =
+  | { op: 'draw'; player: PlayerId; amount: number }
+  | { op: 'ko'; target: string }
+  | { op: 'power'; target: string; amount: number; duration: Duration }
+  | { op: 'rest'; target: string }
+  | { op: 'activate'; target: string }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; pick?: string | null }
+  | { op: 'toLife'; player: PlayerId; instanceId: string }
+  | { op: 'toHand'; player: PlayerId; instanceId: string }
+  | { op: 'discard'; player: PlayerId; instanceId: string }
+  | { op: 'trashFromHand'; player: PlayerId; amount: number }
+  | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
+
+export interface EffectContext {
+  state: GameState
+  source: string
+  owner: PlayerId
+  target?: string
+
+}
+
+export interface EffectCost {
+  restSelf?: boolean
+  restDon?: number
+  trashFromHand?: number
+
+}
+
+export interface EffectDef {
+  timing: Timing
+  donRequired?: number
+  turn?: 'yours' | 'opponents'
+  oncePerTurn?: boolean
+  cost?: EffectCost
+  condition?: (ctx: EffectContext) => boolean
+  run: (ctx: EffectContext) => EffectStep[]
+
+}
+
+export type EffectRegistry = Record<string, EffectDef[]>
+
+export interface QueuedEffect {
+  source: string
+  owner: PlayerId
+  steps: EffectStep[]
+
+}
+
+export interface Modifier {
+  target: string
+  power: number
+  duration: Duration
+  sourceId: string
+
+}
+
+export type ChoiceKind = 'target' | 'option' | 'trashFromHand' | 'orderDeck' | 'confirm'
+
+export interface ResumeToken {
+  source: string
+  owner: PlayerId
+  then: EffectStep[]
+  otherwise: EffectStep[]
+  rest: EffectStep[]
+
+}
+
+export interface PendingChoice {
+  player: PlayerId
+  kind: ChoiceKind
+  options: string[]
+  optional: boolean
+  resume: ResumeToken
+
+}
+
 export interface CardInstance {
   instanceId: string
   defId: string
@@ -46,6 +126,7 @@ export interface PlayerState {
   donDeck: number
   donActive: number
   donRested: number
+  stage: CardInstance | null
   mulliganDone: boolean
 
 }
@@ -54,8 +135,10 @@ export interface BattleState {
   attacker: 'leader' | string
   target: 'leader' | string
   attackerPlayer: PlayerId
-  step: 'block' | 'counter'
+  step: 'block' | 'counter' | 'trigger'
   counterPower: number
+  triggerCard?: CardInstance
+  hitsLeft?: number
 
 }
 
@@ -69,19 +152,32 @@ export interface GameState {
   phase: Phase
   winner: PlayerId | null
   battle: BattleState | null
+  effects: EffectRegistry
+  pending: PendingChoice | null
+  effectQueue: QueuedEffect[]
+  modifiers: Modifier[]
+  oncePerTurnUsed: string[]
 
 }
 
 export type Action =
   | { type: 'Mulligan'; player: PlayerId; redraw: boolean }
   | { type: 'PlayCharacter'; player: PlayerId; instanceId: string; replaceId?: string }
+  | { type: 'PlayEvent'; player: PlayerId; instanceId: string }
+  | { type: 'PlayStage'; player: PlayerId; instanceId: string }
   | { type: 'AttachDon'; player: PlayerId; target: 'leader' | string }
   | { type: 'PassPhase'; player: PlayerId }
   | { type: 'Attack'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
   | { type: 'DeclareBlock'; player: PlayerId; blockerId: string }
   | { type: 'PassBlock'; player: PlayerId }
   | { type: 'UseCounter'; player: PlayerId; instanceId: string }
+  | { type: 'UseCounterEvent'; player: PlayerId; instanceId: string }
   | { type: 'PassCounter'; player: PlayerId }
+  | { type: 'RevealTrigger'; player: PlayerId }
+  | { type: 'PassTrigger'; player: PlayerId }
+  | { type: 'ActivateEffect'; player: PlayerId; source: string; index: number }
+  | { type: 'Choose'; player: PlayerId; option: string }
+  | { type: 'PassChoice'; player: PlayerId }
 
 export type GameEvent =
   | { type: 'MulliganDecided'; player: PlayerId; redraw: boolean }
@@ -90,6 +186,9 @@ export type GameEvent =
   | { type: 'CardDrawn'; player: PlayerId; instanceId: string }
   | { type: 'DonAdded'; player: PlayerId; amount: number }
   | { type: 'CharacterPlayed'; player: PlayerId; instanceId: string }
+  | { type: 'EventPlayed'; player: PlayerId; instanceId: string }
+  | { type: 'StagePlayed'; player: PlayerId; instanceId: string }
+  | { type: 'StageTrashed'; player: PlayerId; instanceId: string }
   | { type: 'CharacterTrashed'; player: PlayerId; instanceId: string }
   | { type: 'DonAttached'; player: PlayerId; target: 'leader' | string }
   | { type: 'AttackDeclared'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
@@ -98,7 +197,24 @@ export type GameEvent =
   | { type: 'CounterUsed'; player: PlayerId; instanceId: string; counterPower: number }
   | { type: 'CounterPassed'; player: PlayerId }
   | { type: 'LifeTaken'; player: PlayerId; instanceId: string }
+  | { type: 'LifeBanished'; player: PlayerId; instanceId: string }
   | { type: 'CharacterKOd'; player: PlayerId; instanceId: string }
+  | { type: 'EffectTriggered'; player: PlayerId; source: string; timing: Timing }
+  | { type: 'CharacterRested'; target: string }
+  | { type: 'CharacterActivated'; target: string }
+  | { type: 'CardSearched'; player: PlayerId; instanceId: string }
+  | { type: 'CardToLife'; player: PlayerId; instanceId: string }
+  | { type: 'CardToHand'; player: PlayerId; instanceId: string }
+  | { type: 'ChoiceRequested'; player: PlayerId; kind: ChoiceKind; options: string[] }
+  | { type: 'ChoiceMade'; player: PlayerId; option: string }
+  | { type: 'ChoicePassed'; player: PlayerId }
+  | { type: 'EffectActivated'; player: PlayerId; source: string; index: number }
+  | { type: 'CardDiscarded'; player: PlayerId; instanceId: string }
+  | { type: 'DonRested'; player: PlayerId; amount: number }
+  | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
+  | { type: 'TriggerAvailable'; player: PlayerId; instanceId: string }
+  | { type: 'TriggerRevealed'; player: PlayerId; instanceId: string }
+  | { type: 'TriggerPassed'; player: PlayerId; instanceId: string }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }
 

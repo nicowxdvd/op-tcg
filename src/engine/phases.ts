@@ -1,5 +1,8 @@
 import type { GameEvent, GameState, Phase, PlayerId, PlayerState } from './types'
 import { opponentOf } from './state'
+import { clearModifiers } from './effects/modifiers'
+import { resolveQueue } from './effects'
+import { queueEffects } from './effects/timing'
 
 function enter(state: GameState, phase: Phase, events: GameEvent[]): GameState {
   events.push({ type: 'PhaseChanged', phase, turn: state.turn, active: state.active })
@@ -76,9 +79,22 @@ export function startTurn(state: GameState, events: GameEvent[]): GameState {
 }
 
 
-export function endTurn(state: GameState, events: GameEvent[]): GameState {
-  const ended = enter(state, 'end', events)
+export function finishTurn(state: GameState, events: GameEvent[]): GameState {
+  return startTurn({ ...clearModifiers(state, 'thisTurn'), oncePerTurnUsed: [], active: opponentOf(state.active), turn: state.turn + 1 }, events)
 
-  return startTurn({ ...ended, active: opponentOf(ended.active), turn: ended.turn + 1 }, events)
+}
+
+
+export function endTurn(state: GameState, events: GameEvent[]): GameState {
+  const ended    = enter(state, 'end', events)
+  const player   = ended.players[ended.active]
+  const sources  = [{ instanceId: player.leader.instanceId, defId: player.leader.defId, owner: ended.active, attachedDon: player.leaderAttachedDon }, ...player.characters.map(character => ({ instanceId: character.card.instanceId, defId: character.card.defId, owner: ended.active, attachedDon: character.attachedDon }))]
+  const queued   = sources.reduce((acc, source) => queueEffects(acc, 'endOfYourTurn', source, events), ended)
+  const resolved = resolveQueue(queued, events)
+
+  if (resolved.phase === 'gameOver' || resolved.pending)
+    return resolved
+
+  return finishTurn(resolved, events)
 
 }

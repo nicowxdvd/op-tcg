@@ -1,6 +1,6 @@
 # SPEC 04 — Efectos y keywords (sistema de efectos, Events, Stages, Trigger)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 03
 > **Fecha:** 2026-10-02
 > **Objetivo:** Agregar al motor de `src/engine/` un sistema de efectos por datos con decisiones del jugador, los keywords principales del juego y la jugada de Events y Stages.
