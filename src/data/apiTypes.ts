@@ -19,3 +19,12 @@ export interface StoredCard extends ApiCard {
   image_file: string
 
 }
+
+
+export interface DeckFile {
+  id: string
+  name: string
+  leader: string
+  cards: { id: string; count: number }[]
+
+}
