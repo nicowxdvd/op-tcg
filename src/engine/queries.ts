@@ -1,4 +1,5 @@
 import type { Action, GameState, PlayerId } from './types'
+import { modifierPower } from './effects/modifiers'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
@@ -73,9 +74,9 @@ export function getPower(state: GameState, instanceId: string): number {
     const character = player.characters.find(candidate => candidate.card.instanceId === instanceId)
 
     if (player.leader.instanceId === instanceId)
-      return powerOf(state, player.leader.defId, id, player.leaderAttachedDon)
+      return powerOf(state, player.leader.defId, id, player.leaderAttachedDon) + modifierPower(state, instanceId)
     if (character)
-      return powerOf(state, character.card.defId, id, character.attachedDon)
+      return powerOf(state, character.card.defId, id, character.attachedDon) + modifierPower(state, instanceId)
   }
 
   throw new Error(`La carta ${instanceId} no está en juego`)

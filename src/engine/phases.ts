@@ -1,5 +1,6 @@
 import type { GameEvent, GameState, Phase, PlayerId, PlayerState } from './types'
 import { opponentOf } from './state'
+import { clearModifiers } from './effects/modifiers'
 
 function enter(state: GameState, phase: Phase, events: GameEvent[]): GameState {
   events.push({ type: 'PhaseChanged', phase, turn: state.turn, active: state.active })
@@ -77,7 +78,7 @@ export function startTurn(state: GameState, events: GameEvent[]): GameState {
 
 
 export function endTurn(state: GameState, events: GameEvent[]): GameState {
-  const ended = enter(state, 'end', events)
+  const ended = enter(clearModifiers(state, 'thisTurn'), 'end', events)
 
   return startTurn({ ...ended, active: opponentOf(ended.active), turn: ended.turn + 1 }, events)
 

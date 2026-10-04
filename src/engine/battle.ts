@@ -1,6 +1,7 @@
 import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId } from './types'
 import { opponentOf, requireMain } from './state'
 import { getPower } from './queries'
+import { clearModifiers } from './effects/modifiers'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
@@ -178,6 +179,6 @@ export function passCounter(state: GameState, action: PassCounterAction): ApplyR
   const battle = requireStep(state, action.player, 'counter')
   const events: GameEvent[] = [{ type: 'CounterPassed', player: action.player }]
 
-  return { state: resolveDamage(state, battle, events), events }
+  return { state: clearModifiers(resolveDamage(state, battle, events), 'thisBattle'), events }
 
 }
