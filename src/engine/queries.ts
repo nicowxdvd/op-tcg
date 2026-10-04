@@ -46,7 +46,9 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
 
   const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].counter > 0)
 
-  return [...counters.map((card): Action => ({ type: 'UseCounter', player: playerId, instanceId: card.instanceId })), { type: 'PassCounter', player: playerId }]
+  const events   = player.hand.filter(card => state.defs[card.defId].type === 'Event' && state.defs[card.defId].cost <= player.donActive && (state.effects[card.defId] ?? []).some(effect => effect.timing === 'counter'))
+
+  return [...counters.map((card): Action => ({ type: 'UseCounter', player: playerId, instanceId: card.instanceId })), ...events.map((card): Action => ({ type: 'UseCounterEvent', player: playerId, instanceId: card.instanceId })), { type: 'PassCounter', player: playerId }]
 
 }
 

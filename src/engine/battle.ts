@@ -8,6 +8,7 @@ type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
 type PassBlockAction    = Extract<Action, { type: 'PassBlock' }>
 type UseCounterAction   = Extract<Action, { type: 'UseCounter' }>
+type CounterEventAction = Extract<Action, { type: 'UseCounterEvent' }>
 type PassCounterAction  = Extract<Action, { type: 'PassCounter' }>
 
 
@@ -100,6 +101,31 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
   const counterPower = battle.counterPower + def.counter
 
   return { state: { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }, events: [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }] }
+
+}
+
+
+export function useCounterEvent(state: GameState, action: CounterEventAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'counter')
+  const player = state.players[action.player]
+  const picked = player.hand.find(candidate => candidate.instanceId === action.instanceId)
+  const def    = picked && state.defs[picked.defId]
+
+  if (!picked || !def)
+    throw new Error(`La carta ${action.instanceId} no está en la mano de ${action.player}`)
+  if (def.type !== 'Event')
+    throw new Error(`${def.name} no es un Event`)
+  if (!(state.effects[picked.defId] ?? []).some(effect => effect.timing === 'counter'))
+    throw new Error(`${def.name} no tiene efecto [Counter]`)
+  if (player.donActive < def.cost)
+    throw new Error(`DON!! insuficiente: cost ${def.cost}, activos ${player.donActive}`)
+
+  const counterPower        = battle.counterPower + def.counter
+  const events: GameEvent[] = [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }]
+  const updated             = { ...player, hand: player.hand.filter(candidate => candidate !== picked), trash: [...player.trash, picked], donActive: player.donActive - def.cost, donRested: player.donRested + def.cost }
+  const next                = { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }
+
+  return { state: fireEffects(next, 'counter', { instanceId: picked.instanceId, defId: picked.defId, owner: action.player, attachedDon: 0 }, events), events }
 
 }
 

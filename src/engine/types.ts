@@ -169,6 +169,7 @@ export type Action =
   | { type: 'DeclareBlock'; player: PlayerId; blockerId: string }
   | { type: 'PassBlock'; player: PlayerId }
   | { type: 'UseCounter'; player: PlayerId; instanceId: string }
+  | { type: 'UseCounterEvent'; player: PlayerId; instanceId: string }
   | { type: 'PassCounter'; player: PlayerId }
   | { type: 'ActivateEffect'; player: PlayerId; source: string; index: number }
   | { type: 'Choose'; player: PlayerId; option: string }
