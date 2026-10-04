@@ -64,14 +64,16 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
   if (playerId !== state.active)
     return []
 
-  const player   = state.players[playerId]
-  const full     = player.characters.length >= MAX_CHARACTERS
-  const playable = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].cost <= player.donActive)
-  const plays    = playable.flatMap((card): Action[] => full ? player.characters.map(character => ({ type: 'PlayCharacter', player: playerId, instanceId: card.instanceId, replaceId: character.card.instanceId })) : [{ type: 'PlayCharacter', player: playerId, instanceId: card.instanceId }])
-  const targets  = player.donActive > 0 ? ['leader', ...player.characters.map(character => character.card.instanceId)] : []
-  const attaches = targets.map((target): Action => ({ type: 'AttachDon', player: playerId, target }))
+  const player    = state.players[playerId]
+  const full      = player.characters.length >= MAX_CHARACTERS
+  const playable  = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].cost <= player.donActive)
+  const plays     = playable.flatMap((card): Action[] => full ? player.characters.map(character => ({ type: 'PlayCharacter', player: playerId, instanceId: card.instanceId, replaceId: character.card.instanceId })) : [{ type: 'PlayCharacter', player: playerId, instanceId: card.instanceId }])
+  const others    = player.hand.filter(card => ((state.defs[card.defId].type === 'Event' && (state.effects[card.defId] ?? []).some(effect => effect.timing === 'main')) || state.defs[card.defId].type === 'Stage') && state.defs[card.defId].cost <= player.donActive)
+  const spells    = others.map((card): Action => ({ type: state.defs[card.defId].type === 'Event' ? 'PlayEvent' : 'PlayStage', player: playerId, instanceId: card.instanceId }))
+  const targets   = player.donActive > 0 ? ['leader', ...player.characters.map(character => character.card.instanceId)] : []
+  const attaches  = targets.map((target): Action => ({ type: 'AttachDon', player: playerId, target }))
 
-  return [...plays, ...attaches, ...activateActions(state, playerId), ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
+  return [...plays, ...spells, ...attaches, ...activateActions(state, playerId), ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
 
 }
 

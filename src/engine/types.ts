@@ -161,6 +161,8 @@ export interface GameState {
 export type Action =
   | { type: 'Mulligan'; player: PlayerId; redraw: boolean }
   | { type: 'PlayCharacter'; player: PlayerId; instanceId: string; replaceId?: string }
+  | { type: 'PlayEvent'; player: PlayerId; instanceId: string }
+  | { type: 'PlayStage'; player: PlayerId; instanceId: string }
   | { type: 'AttachDon'; player: PlayerId; target: 'leader' | string }
   | { type: 'PassPhase'; player: PlayerId }
   | { type: 'Attack'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
@@ -179,6 +181,9 @@ export type GameEvent =
   | { type: 'CardDrawn'; player: PlayerId; instanceId: string }
   | { type: 'DonAdded'; player: PlayerId; amount: number }
   | { type: 'CharacterPlayed'; player: PlayerId; instanceId: string }
+  | { type: 'EventPlayed'; player: PlayerId; instanceId: string }
+  | { type: 'StagePlayed'; player: PlayerId; instanceId: string }
+  | { type: 'StageTrashed'; player: PlayerId; instanceId: string }
   | { type: 'CharacterTrashed'; player: PlayerId; instanceId: string }
   | { type: 'DonAttached'; player: PlayerId; target: 'leader' | string }
   | { type: 'AttackDeclared'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
