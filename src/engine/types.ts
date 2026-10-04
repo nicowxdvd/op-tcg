@@ -32,6 +32,8 @@ export type EffectStep =
   | { op: 'search'; player: PlayerId; amount: number; type?: CardType; pick?: string | null }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
+  | { op: 'discard'; player: PlayerId; instanceId: string }
+  | { op: 'trashFromHand'; player: PlayerId; amount: number }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {
@@ -166,6 +168,7 @@ export type Action =
   | { type: 'PassBlock'; player: PlayerId }
   | { type: 'UseCounter'; player: PlayerId; instanceId: string }
   | { type: 'PassCounter'; player: PlayerId }
+  | { type: 'ActivateEffect'; player: PlayerId; source: string; index: number }
   | { type: 'Choose'; player: PlayerId; option: string }
   | { type: 'PassChoice'; player: PlayerId }
 
@@ -195,6 +198,9 @@ export type GameEvent =
   | { type: 'ChoiceRequested'; player: PlayerId; kind: ChoiceKind; options: string[] }
   | { type: 'ChoiceMade'; player: PlayerId; option: string }
   | { type: 'ChoicePassed'; player: PlayerId }
+  | { type: 'EffectActivated'; player: PlayerId; source: string; index: number }
+  | { type: 'CardDiscarded'; player: PlayerId; instanceId: string }
+  | { type: 'DonRested'; player: PlayerId; amount: number }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }

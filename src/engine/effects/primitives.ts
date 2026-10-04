@@ -118,6 +118,20 @@ function toLife(state: GameState, id: PlayerId, instanceId: string, events: Game
 }
 
 
+function discard(state: GameState, id: PlayerId, instanceId: string, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = player.hand.find(candidate => candidate.instanceId === instanceId)
+
+  if (!moved)
+    throw new Error(`La carta ${instanceId} no está en la mano de ${id}`)
+
+  events.push({ type: 'CardDiscarded', player: id, instanceId })
+
+  return setPlayer(state, id, { ...player, hand: player.hand.filter(candidate => candidate !== moved), trash: [...player.trash, moved] })
+
+}
+
+
 function toHand(state: GameState, id: PlayerId, instanceId: string, events: GameEvent[]): GameState {
   const player    = state.players[id]
   const inLife    = player.life.find(candidate => candidate.instanceId === instanceId)
@@ -153,6 +167,8 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return search(state, step.player, step.amount, step.type, step.pick, events)
     case 'toLife':
       return toLife(state, step.player, step.instanceId, events)
+    case 'discard':
+      return discard(state, step.player, step.instanceId, events)
     case 'toHand':
       return toHand(state, step.player, step.instanceId, events)
     default:

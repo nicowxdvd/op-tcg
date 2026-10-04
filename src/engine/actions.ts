@@ -4,6 +4,7 @@ import { startTurn, endTurn } from './phases'
 import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
 import { fireEffects } from './effects'
 import { choose, passChoice } from './effects/choice'
+import { activateEffect } from './effects/activate'
 import { attack, declareBlock, passBlock, useCounter, passCounter } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
@@ -151,6 +152,8 @@ export function apply(state: GameState, action: Action): ApplyResult {
       return useCounter(state, action)
     case 'PassCounter':
       return passCounter(state, action)
+    case 'ActivateEffect':
+      return activateEffect(state, action)
     case 'Choose':
       return choose(state, action)
     case 'PassChoice':

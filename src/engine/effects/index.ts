@@ -4,8 +4,21 @@ import { executeStep } from './primitives'
 import { queueEffects, type EffectSource } from './timing'
 
 type SearchStep = Extract<EffectStep, { op: 'search' }>
+type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
 
 export type { EffectSource } from './timing'
+
+
+function expandTrash(state: GameState, step: TrashStep): EffectStep[] {
+  const options = state.players[step.player].hand.map(candidate => candidate.instanceId)
+  const more    = step.amount > 1 ? [{ ...step, amount: step.amount - 1 }] : []
+
+  if (!options.length)
+    return []
+
+  return [{ op: 'choose', chooser: step.player, kind: 'trashFromHand', options, optional: false, then: [{ op: 'discard', player: step.player, instanceId: CHOICE }, ...more] }]
+
+}
 
 
 function expandSearch(state: GameState, step: SearchStep): EffectStep[] {
@@ -34,6 +47,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'search' && step.pick === undefined) {
         steps = [...expandSearch(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'trashFromHand') {
+        steps = [...expandTrash(next, step), ...others]
 
         continue
 

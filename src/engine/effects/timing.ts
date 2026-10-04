@@ -20,21 +20,37 @@ function turnMatches(state: GameState, owner: PlayerId, turn: EffectDef['turn'])
 }
 
 
+export function effectKey(source: EffectSource, index: number): string {
+  return `${source.defId}:${source.instanceId}:${index}`
+
+}
+
+
+export function isEligible(state: GameState, source: EffectSource, index: number, effect: EffectDef): boolean {
+  const ctx: EffectContext = { state, source: source.instanceId, owner: source.owner }
+
+  if ((effect.donRequired ?? 0) > source.attachedDon || !turnMatches(state, source.owner, effect.turn))
+    return false
+  if (effect.oncePerTurn && state.oncePerTurnUsed.includes(effectKey(source, index)))
+    return false
+
+  return !effect.condition || effect.condition(ctx)
+
+}
+
+
 export function queueEffects(state: GameState, timing: Timing, source: EffectSource, events: GameEvent[]): GameState {
   let next = state
 
   for (const [index, effect] of (state.effects[source.defId] ?? []).entries()) {
-    const key = `${source.defId}:${source.instanceId}:${index}`
-    const ctx: EffectContext = { state: next, source: source.instanceId, owner: source.owner }
+    if (effect.timing !== timing || !isEligible(next, source, index, effect))
+      continue
 
-    if (effect.timing !== timing || (effect.donRequired ?? 0) > source.attachedDon || !turnMatches(next, source.owner, effect.turn))
-      continue
-    if ((effect.oncePerTurn && next.oncePerTurnUsed.includes(key)) || (effect.condition && !effect.condition(ctx)))
-      continue
+    const ctx: EffectContext = { state: next, source: source.instanceId, owner: source.owner }
 
     events.push({ type: 'EffectTriggered', player: source.owner, source: source.instanceId, timing })
 
-    next = { ...next, effectQueue: [...next.effectQueue, { source: source.instanceId, owner: source.owner, steps: effect.run(ctx) }], oncePerTurnUsed: effect.oncePerTurn ? [...next.oncePerTurnUsed, key] : next.oncePerTurnUsed }
+    next = { ...next, effectQueue: [...next.effectQueue, { source: source.instanceId, owner: source.owner, steps: effect.run(ctx) }], oncePerTurnUsed: effect.oncePerTurn ? [...next.oncePerTurnUsed, effectKey(source, index)] : next.oncePerTurnUsed }
 
   }
 

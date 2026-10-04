@@ -1,4 +1,5 @@
 import type { Action, GameState, PlayerId } from './types'
+import { activateError } from './effects/activate'
 import { modifierPower } from './effects/modifiers'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
@@ -14,6 +15,16 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
   const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
 
   return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
+
+}
+
+
+function activateActions(state: GameState, playerId: PlayerId): Action[] {
+  const player  = state.players[playerId]
+  const sources = [player.leader.instanceId, ...player.characters.map(character => character.card.instanceId), ...(player.stage ? [player.stage.instanceId] : [])]
+  const defOf   = (instanceId: string) => instanceId === player.leader.instanceId ? player.leader.defId : player.characters.find(character => character.card.instanceId === instanceId)?.card.defId ?? player.stage!.defId
+
+  return sources.flatMap(source => (state.effects[defOf(source)] ?? []).flatMap((_, index): Action[] => activateError(state, playerId, source, index) === null ? [{ type: 'ActivateEffect', player: playerId, source, index }] : []))
 
 }
 
@@ -60,7 +71,7 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
   const targets  = player.donActive > 0 ? ['leader', ...player.characters.map(character => character.card.instanceId)] : []
   const attaches = targets.map((target): Action => ({ type: 'AttachDon', player: playerId, target }))
 
-  return [...plays, ...attaches, ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
+  return [...plays, ...attaches, ...activateActions(state, playerId), ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
 
 }
 
