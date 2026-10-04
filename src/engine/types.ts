@@ -182,6 +182,8 @@ export type GameEvent =
   | { type: 'LifeTaken'; player: PlayerId; instanceId: string }
   | { type: 'LifeBanished'; player: PlayerId; instanceId: string }
   | { type: 'CharacterKOd'; player: PlayerId; instanceId: string }
+  | { type: 'EffectTriggered'; player: PlayerId; source: string; timing: Timing }
+  | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }
 

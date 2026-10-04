@@ -2,6 +2,7 @@ import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId }
 import { opponentOf, requireMain } from './state'
 import { getPower } from './queries'
 import { clearModifiers } from './effects/modifiers'
+import { fireEffects } from './effects'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
@@ -47,7 +48,10 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
   const rested = fromLeader ? { ...player, leaderRested: true } : { ...player, characters: player.characters.map(candidate => candidate === character ? { ...candidate, rested: true } : candidate) }
   const battle = { attacker: action.attacker, target: action.target, attackerPlayer: action.player, step: 'block' as const, counterPower: 0 }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: rested }, battle }, events: [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }] }
+  const events: GameEvent[] = [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }]
+  const source              = fromLeader ? { instanceId: player.leader.instanceId, defId: player.leader.defId, owner: action.player, attachedDon: player.leaderAttachedDon } : { instanceId: character!.card.instanceId, defId: character!.card.defId, owner: action.player, attachedDon: character!.attachedDon }
+
+  return { state: fireEffects({ ...state, players: { ...state.players, [action.player]: rested }, battle }, 'whenAttacking', source, events), events }
 
 }
 
@@ -166,7 +170,7 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
     const knocked = { ...rival, characters: rival.characters.filter(candidate => candidate !== struck), trash: [...rival.trash, struck.card], donRested: rival.donRested + struck.attachedDon }
 
-    return { ...state, players: { ...state.players, [defender]: knocked }, battle: null }
+    return fireEffects({ ...state, players: { ...state.players, [defender]: knocked }, battle: null }, 'onKO', { instanceId: struck.card.instanceId, defId: struck.card.defId, owner: defender, attachedDon: struck.attachedDon }, events)
 
   }
 

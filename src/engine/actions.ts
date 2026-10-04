@@ -2,6 +2,7 @@ import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './type
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
 import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
+import { fireEffects } from './effects'
 import { attack, declareBlock, passBlock, useCounter, passCounter } from './battle'
 
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
@@ -99,7 +100,9 @@ function playCharacter(state: GameState, action: PlayAction): ApplyResult {
 
   const updated = { ...player, hand: player.hand.filter(candidate => candidate !== card), trash: replaced ? [...player.trash, replaced.card] : player.trash, characters: [...player.characters.filter(character => character !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donActive: player.donActive - def.cost, donRested: player.donRested + def.cost + (replaced?.attachedDon ?? 0) }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: updated } }, events }
+  const next = { ...state, players: { ...state.players, [action.player]: updated } }
+
+  return { state: fireEffects(next, 'onPlay', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events), events }
 
 }
 

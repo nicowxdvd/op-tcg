@@ -1,6 +1,7 @@
 import type { GameEvent, GameState, Phase, PlayerId, PlayerState } from './types'
 import { opponentOf } from './state'
 import { clearModifiers } from './effects/modifiers'
+import { fireEffects } from './effects'
 
 function enter(state: GameState, phase: Phase, events: GameEvent[]): GameState {
   events.push({ type: 'PhaseChanged', phase, turn: state.turn, active: state.active })
@@ -78,8 +79,14 @@ export function startTurn(state: GameState, events: GameEvent[]): GameState {
 
 
 export function endTurn(state: GameState, events: GameEvent[]): GameState {
-  const ended = enter(clearModifiers(state, 'thisTurn'), 'end', events)
+  const ended   = enter(state, 'end', events)
+  const player  = ended.players[ended.active]
+  const sources = [{ instanceId: player.leader.instanceId, defId: player.leader.defId, owner: ended.active, attachedDon: player.leaderAttachedDon }, ...player.characters.map(character => ({ instanceId: character.card.instanceId, defId: character.card.defId, owner: ended.active, attachedDon: character.attachedDon }))]
+  const fired   = sources.reduce((acc, source) => fireEffects(acc, 'endOfYourTurn', source, events), ended)
 
-  return startTurn({ ...ended, active: opponentOf(ended.active), turn: ended.turn + 1 }, events)
+  if (fired.phase === 'gameOver')
+    return fired
+
+  return startTurn({ ...clearModifiers(fired, 'thisTurn'), oncePerTurnUsed: [], active: opponentOf(fired.active), turn: fired.turn + 1 }, events)
 
 }
