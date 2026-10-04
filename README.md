@@ -12,14 +12,14 @@ Un simulador web del **One Piece Card Game** para aprender a jugar. La idea: sen
 | Motor base | `02-motor-base` | Zarpó (implementado) |
 | Batalla | `03-batalla` | Zarpó (implementado) |
 | Efectos y keywords | `04-efectos-keywords` | Zarpó (implementado) |
-| Datos de cartas | `05-datos` | En el mapa (borrador) |
+| Datos de cartas | `05-datos` | Zarpó (implementado) |
 | UI con Phaser | `06-ui-phaser` | En el mapa |
 | Modo aprendizaje | `07-modo-aprendizaje` | En el mapa |
 | IA simple | `08-ia-simple` | En el mapa |
 | Pulido | `09-pulido` | En el mapa |
 | Efectos ST-01 / ST-02 | `10-efectos-cartas-st01-st02` | En el mapa |
 
-El motor ya resuelve una partida completa: creación de partida, mulligan, Life, fases del turno, DON!!, jugar Characters, Events y Stages, adjuntar DON!!, la batalla (ataque, Blocker, Counter, daño, K.O. y victoria por Life) y un sistema de efectos por datos con los keywords Rush, Double Attack y Banish, los triggers `[On Play]`, `[When Attacking]`, `[On K.O.]`, `[Activate: Main]`, `[End of Your Turn]`, `[Counter]` y `[Trigger]`, y decisiones del jugador. Las cartas reales todavía no tienen efectos codificados. Todavía no hay UI de juego: el navegador solo muestra la escena `Boot`. El resto del tesoro está por descubrir.
+El motor ya resuelve una partida completa: creación de partida, mulligan, Life, fases del turno, DON!!, jugar Characters, Events y Stages, adjuntar DON!!, la batalla (ataque, Blocker, Counter, daño, K.O. y victoria por Life) y un sistema de efectos por datos con los keywords Rush, Double Attack y Banish, los triggers `[On Play]`, `[When Attacking]`, `[On K.O.]`, `[Activate: Main]`, `[End of Your Turn]`, `[Counter]` y `[Trigger]`, y decisiones del jugador. Las cartas de ST-01 y ST-02 ya se cargan desde JSON local, con dos mazos de práctica de 50 cartas, pero todavía no tienen efectos codificados. Todavía no hay UI de juego: el navegador solo muestra la escena `Boot`. El resto del tesoro está por descubrir.
 
 ## Tripulación (stack)
 
@@ -36,6 +36,7 @@ npm run dev        # servidor de desarrollo
 npm run build      # typecheck + build de producción
 npm test           # tests con Vitest
 npm run typecheck  # solo tsc
+npm run fetch:cards # descarga cartas e imágenes de ST-01 y ST-02 (imágenes fuera de git)
 ```
 
 ## Mapa del proyecto
@@ -44,8 +45,10 @@ npm run typecheck  # solo tsc
 src/
   main.ts        # punto de entrada, configura Phaser
   scenes/        # escenas de Phaser (Boot por ahora)
+  data/          # cartas y mazos de ST-01 y ST-02 en JSON, conversión a CardDef y cargador
   engine/        # motor de reglas (TypeScript puro, sin Phaser): tipos, estado, RNG, fases, acciones, batalla, efectos y consultas
-tests/           # tests del motor y de humo
+scripts/         # scripts de utilidad (fetchCards)
+tests/           # tests del motor, de datos y de humo
 specs/           # una spec por etapa, con estado Borrador/Aprobado/Implementado
 ```
 
