@@ -19,6 +19,82 @@ export interface CardDef {
 
 }
 
+export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main'
+
+export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
+
+export type EffectStep =
+  | { op: 'draw'; player: PlayerId; amount: number }
+  | { op: 'ko'; target: string }
+  | { op: 'power'; target: string; amount: number; duration: Duration }
+  | { op: 'rest'; target: string }
+  | { op: 'activate'; target: string }
+  | { op: 'search'; player: PlayerId; amount: number }
+  | { op: 'toLife'; player: PlayerId; instanceId: string }
+  | { op: 'toHand'; player: PlayerId; instanceId: string }
+  | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[] }
+
+export interface EffectContext {
+  state: GameState
+  source: string
+  owner: PlayerId
+  target?: string
+
+}
+
+export interface EffectCost {
+  restSelf?: boolean
+  restDon?: number
+  trashFromHand?: number
+
+}
+
+export interface EffectDef {
+  timing: Timing
+  donRequired?: number
+  turn?: 'yours' | 'opponents'
+  oncePerTurn?: boolean
+  cost?: EffectCost
+  condition?: (ctx: EffectContext) => boolean
+  run: (ctx: EffectContext) => EffectStep[]
+
+}
+
+export type EffectRegistry = Record<string, EffectDef[]>
+
+export interface QueuedEffect {
+  source: string
+  owner: PlayerId
+  steps: EffectStep[]
+
+}
+
+export interface Modifier {
+  target: string
+  power: number
+  duration: Duration
+  sourceId: string
+
+}
+
+export type ChoiceKind = 'target' | 'option' | 'trashFromHand' | 'orderDeck' | 'confirm'
+
+export interface ResumeToken {
+  source: string
+  owner: PlayerId
+  rest: EffectStep[]
+
+}
+
+export interface PendingChoice {
+  player: PlayerId
+  kind: ChoiceKind
+  options: string[]
+  optional: boolean
+  resume: ResumeToken
+
+}
+
 export interface CardInstance {
   instanceId: string
   defId: string
@@ -46,6 +122,7 @@ export interface PlayerState {
   donDeck: number
   donActive: number
   donRested: number
+  stage: CardInstance | null
   mulliganDone: boolean
 
 }
@@ -69,6 +146,11 @@ export interface GameState {
   phase: Phase
   winner: PlayerId | null
   battle: BattleState | null
+  effects: EffectRegistry
+  pending: PendingChoice | null
+  effectQueue: QueuedEffect[]
+  modifiers: Modifier[]
+  oncePerTurnUsed: string[]
 
 }
 
