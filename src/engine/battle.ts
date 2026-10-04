@@ -9,6 +9,8 @@ type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
 type PassBlockAction    = Extract<Action, { type: 'PassBlock' }>
 type UseCounterAction   = Extract<Action, { type: 'UseCounter' }>
 type CounterEventAction = Extract<Action, { type: 'UseCounterEvent' }>
+type RevealAction       = Extract<Action, { type: 'RevealTrigger' }>
+type PassTriggerAction  = Extract<Action, { type: 'PassTrigger' }>
 type PassCounterAction  = Extract<Action, { type: 'PassCounter' }>
 
 
@@ -130,11 +132,8 @@ export function useCounterEvent(state: GameState, action: CounterEventAction): A
 }
 
 
-function dealLifeDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
+function dealLifeDamage(state: GameState, battle: BattleState, hits: number, banish: boolean, events: GameEvent[]): GameState {
   const defender = opponentOf(battle.attackerPlayer)
-  const keywords = state.defs[attackerDefId(state, battle)].keywords
-  const banish   = keywords.includes('Banish')
-  const hits     = keywords.includes('DoubleAttack') ? 2 : 1
   let next       = state
 
   for (let hit = 0; hit < hits; hit++) {
@@ -148,11 +147,20 @@ function dealLifeDamage(state: GameState, battle: BattleState, events: GameEvent
     }
 
     const [top, ...rest] = rival.life
-    const hurt           = banish ? { ...rival, life: rest, trash: [...rival.trash, top] } : { ...rival, life: rest, hand: [...rival.hand, top] }
+    const triggers       = !banish && (state.effects[top.defId] ?? []).some(effect => effect.timing === 'trigger')
+    const hurt           = banish ? { ...rival, life: rest, trash: [...rival.trash, top] } : triggers ? { ...rival, life: rest } : { ...rival, life: rest, hand: [...rival.hand, top] }
 
     events.splice(events.length - 1, 0, { type: banish ? 'LifeBanished' : 'LifeTaken', player: defender, instanceId: top.instanceId })
 
     next = { ...next, players: { ...next.players, [defender]: hurt } }
+
+    if (triggers) {
+      events.pop()
+      events.push({ type: 'TriggerAvailable', player: defender, instanceId: top.instanceId })
+
+      return { ...next, battle: { ...battle, step: 'trigger', triggerCard: top, hitsLeft: hits - hit - 1 } }
+
+    }
 
   }
 
@@ -200,7 +208,9 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
   }
 
-  return dealLifeDamage(state, battle, events)
+  const keywords = state.defs[attackerDefId(state, battle)].keywords
+
+  return dealLifeDamage(state, battle, keywords.includes('DoubleAttack') ? 2 : 1, keywords.includes('Banish'), events)
 
 }
 
@@ -209,6 +219,58 @@ export function passCounter(state: GameState, action: PassCounterAction): ApplyR
   const battle = requireStep(state, action.player, 'counter')
   const events: GameEvent[] = [{ type: 'CounterPassed', player: action.player }]
 
-  return { state: clearModifiers(resolveDamage(state, battle, events), 'thisBattle'), events }
+  const resolved = resolveDamage(state, battle, events)
+
+  return { state: resolved.battle ? resolved : clearModifiers(resolved, 'thisBattle'), events }
+
+}
+
+
+function continueBattle(state: GameState, events: GameEvent[]): GameState {
+  const battle = state.battle!
+
+  events.push({ type: 'BattleEnded', connected: true })
+
+  const resolved = dealLifeDamage(state, battle, battle.hitsLeft ?? 0, false, events)
+
+  return resolved.battle ? resolved : clearModifiers(resolved, 'thisBattle')
+
+}
+
+
+export function resumeTrigger(state: GameState, events: GameEvent[]): GameState {
+  if (state.pending)
+    return state
+  if (state.phase === 'gameOver')
+    return { ...state, battle: null }
+  if (!state.battle || state.battle.step !== 'trigger' || state.battle.triggerCard)
+    return state
+
+  return continueBattle(state, events)
+
+}
+
+
+export function revealTrigger(state: GameState, action: RevealAction): ApplyResult {
+  const battle   = requireStep(state, action.player, 'trigger')
+  const card     = battle.triggerCard!
+  const player   = state.players[action.player]
+  const events: GameEvent[] = [{ type: 'TriggerRevealed', player: action.player, instanceId: card.instanceId }]
+  const next     = { ...state, players: { ...state.players, [action.player]: { ...player, trash: [...player.trash, card] } }, battle: { ...battle, triggerCard: undefined } }
+  const resolved = fireEffects(next, 'trigger', { instanceId: card.instanceId, defId: card.defId, owner: action.player, attachedDon: 0 }, events)
+
+  return { state: resumeTrigger(resolved, events), events }
+
+}
+
+
+export function passTrigger(state: GameState, action: PassTriggerAction): ApplyResult {
+  const battle = requireStep(state, action.player, 'trigger')
+  const card   = battle.triggerCard!
+  const player = state.players[action.player]
+  const events: GameEvent[] = [{ type: 'TriggerPassed', player: action.player, instanceId: card.instanceId }]
+  const next   = { ...state, players: { ...state.players, [action.player]: { ...player, hand: [...player.hand, card] } }, battle: { ...battle, triggerCard: undefined } }
+
+  return { state: resumeTrigger(next, events), events }
 
 }

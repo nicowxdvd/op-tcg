@@ -1,4 +1,5 @@
 import type { Action, ApplyResult, EffectStep, GameEvent, GameState, PendingChoice, PlayerId } from '../types'
+import { resumeTrigger } from '../battle'
 import { finishTurn } from '../phases'
 import { bind } from './binding'
 import { resolveQueue } from './index'
@@ -22,7 +23,7 @@ function resume(state: GameState, pending: PendingChoice, steps: EffectStep[], e
   const resolved = resolveQueue({ ...state, pending: null, effectQueue: [queued, ...state.effectQueue] }, events)
   const finished = resolved.phase === 'end' && !resolved.pending
 
-  return { state: finished ? finishTurn(resolved, events) : resolved, events }
+  return { state: finished ? finishTurn(resolved, events) : resumeTrigger(resolved, events), events }
 
 }
 

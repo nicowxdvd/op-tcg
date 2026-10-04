@@ -135,8 +135,10 @@ export interface BattleState {
   attacker: 'leader' | string
   target: 'leader' | string
   attackerPlayer: PlayerId
-  step: 'block' | 'counter'
+  step: 'block' | 'counter' | 'trigger'
   counterPower: number
+  triggerCard?: CardInstance
+  hitsLeft?: number
 
 }
 
@@ -171,6 +173,8 @@ export type Action =
   | { type: 'UseCounter'; player: PlayerId; instanceId: string }
   | { type: 'UseCounterEvent'; player: PlayerId; instanceId: string }
   | { type: 'PassCounter'; player: PlayerId }
+  | { type: 'RevealTrigger'; player: PlayerId }
+  | { type: 'PassTrigger'; player: PlayerId }
   | { type: 'ActivateEffect'; player: PlayerId; source: string; index: number }
   | { type: 'Choose'; player: PlayerId; option: string }
   | { type: 'PassChoice'; player: PlayerId }
@@ -208,6 +212,9 @@ export type GameEvent =
   | { type: 'CardDiscarded'; player: PlayerId; instanceId: string }
   | { type: 'DonRested'; player: PlayerId; amount: number }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
+  | { type: 'TriggerAvailable'; player: PlayerId; instanceId: string }
+  | { type: 'TriggerRevealed'; player: PlayerId; instanceId: string }
+  | { type: 'TriggerPassed'; player: PlayerId; instanceId: string }
   | { type: 'BattleEnded'; connected: boolean }
   | { type: 'GameOver'; winner: PlayerId }
 

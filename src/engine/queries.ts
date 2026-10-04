@@ -37,6 +37,9 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
 
   const player = state.players[playerId]
 
+  if (battle.step === 'trigger')
+    return battle.triggerCard ? [{ type: 'RevealTrigger', player: playerId }, { type: 'PassTrigger', player: playerId }] : []
+
   if (battle.step === 'block') {
     const blockers = player.characters.filter(character => !character.rested && state.defs[character.card.defId].keywords.includes('Blocker'))
 
