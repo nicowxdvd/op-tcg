@@ -1,4 +1,6 @@
 import * as Phaser from 'phaser'
+import { loadDefs } from '../data'
+import { findCardImages } from '../ui/textures'
 
 export class Boot extends Phaser.Scene {
 
@@ -8,8 +10,10 @@ export class Boot extends Phaser.Scene {
   }
 
 
-  create() {
-    this.add.text(this.scale.width / 2, this.scale.height / 2, 'One Piece TCG', { fontSize: '48px', color: '#ffffff' }).setOrigin(0.5)
+  async create() {
+    const images = await findCardImages(Object.keys(loadDefs()))
+
+    this.scene.start('Board', { images })
 
   }
 
