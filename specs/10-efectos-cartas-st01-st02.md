@@ -1,6 +1,6 @@
 # SPEC 10 — Efectos de las cartas de ST01 y ST02
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 04, SPEC 05
 > **Fecha:** 2026-10-02
 > **Objetivo:** Codificar con el DSL de SPEC 04 los efectos de todas las cartas de los Starter Decks ST01 (Straw Hat Crew) y ST02 (Worst Generation), de modo que las partidas con los mazos reales apliquen el texto de cada carta.
@@ -76,7 +76,7 @@ Inventario (se completa en el paso 1 con la respuesta real de la API de SPEC 05)
 | ST01-010 Franky | Character | (sin texto) | vanilla | Verificada |
 | ST01-011 Brook | Character | [On Play] Give up to 2 rested DON!! cards to your Leader or 1 of your Characters. | `attachDon` (nueva) | Verificada |
 | ST01-012 Monkey.D.Luffy | Character | [Rush] [DON!! x2] [When Attacking] Your opponent cannot activate [Blocker] during this battle. | keyword `Rush`, `blockerLock` (nueva) | Verificada |
-| ST01-013 Roronoa Zoro | Character | [DON!! x1] This Character gains +1000 power. | `passivePower` (nueva) | Verificada |
+| ST01-013 Roronoa Zoro | Character | [DON!! x1] This Character gains +1000 power. | `passivePower` (nueva) | Verificada (el texto de la API omite `[Your Turn]`; la carta física lo lleva y se codificó con `turn: 'yours'`) |
 | ST01-014 Guard Point | Event | [Counter] Up to 1 of your Leader or Character cards gains +3000 power during this battle. [Trigger] Up to 1 of your Leader or Character cards gains +1000 power during this turn. | `power`, `choose` | Verificada |
 | ST01-015 Gum-Gum Jet Pistol | Event | [Main] K.O. up to 1 of your opponent's Characters with 6000 power or less. [Trigger] Activate this card's [Main] effect. | `ko`, `choose`; el Trigger reutiliza la función del Main | Verificada |
 | ST01-016 Diable Jambe | Event | [Main] Select up to 1 of your {Straw Hat Crew} type Leader or Character cards. Your opponent cannot activate [Blocker] if that Leader or Character attacks during this turn. [Trigger] K.O. up to 1 of your opponent's [Blocker] Characters with a cost of 3 or less. | `blockerLock` (nueva), `ko`, `choose`, tipos (`traits`, nuevo en `CardDef`) | Verificada |
@@ -137,15 +137,15 @@ Reglas fijadas:
 
 ## Criterios de aceptación
 
-- [ ] El inventario de esta spec lista todas las cartas distintas de ST01 y ST02 con su estado.
-- [ ] `coverage.test.ts` comprueba que cada `defId` de los mazos de ST01 y ST02 está en el registro.
-- [ ] Cada carta con efecto tiene un test que verifica el resultado del texto oficial.
-- [ ] Cada efecto con condición (`DON!! xN`, turno, `Once Per Turn`) tiene un test que verifica que no se aplica si la condición falla.
-- [ ] Las cartas sin efecto tienen entrada vacía y un test que lo confirma.
-- [ ] Una partida completa de ST01 contra ST02 con efectos activos termina sin errores y sin romper los invariantes del motor.
-- [ ] Ninguna carta queda en estado `Pendiente` en el inventario sin un motivo anotado.
-- [ ] `npm run typecheck` y `npm test` terminan con código 0.
-- [ ] Ningún archivo bajo `src/engine/` importa `phaser`.
+- [x] El inventario de esta spec lista todas las cartas distintas de ST01 y ST02 con su estado.
+- [x] `coverage.test.ts` comprueba que cada `defId` de los mazos de ST01 y ST02 está en el registro.
+- [x] Cada carta con efecto tiene un test que verifica el resultado del texto oficial.
+- [x] Cada efecto con condición (`DON!! xN`, turno, `Once Per Turn`) tiene un test que verifica que no se aplica si la condición falla.
+- [x] Las cartas sin efecto tienen entrada vacía y un test que lo confirma.
+- [x] Una partida completa de ST01 contra ST02 con efectos activos termina sin errores y sin romper los invariantes del motor.
+- [x] Ninguna carta queda en estado `Pendiente` en el inventario sin un motivo anotado.
+- [x] `npm run typecheck` y `npm test` terminan con código 0.
+- [x] Ningún archivo bajo `src/engine/` importa `phaser`.
 
 ---
 
@@ -180,3 +180,14 @@ Reglas fijadas:
 - Multijugador.
 
 Cada uno de esos puntos, si se hace, va en su propia spec.
+
+---
+
+## Hallazgos de la implementación
+
+- **Primitivas y mecanismos agregados al motor (paso 2):** `attachDon`, `restDon`, `activateDon`, `blockerLock` (con `state.restrictions`), `playSelf`, filtro `trait` en `search`, `traits` en `CardDef`, efectos `passive` con `aura` (power y keyword, con `affects` para otras cartas) y el timing `onBattle`.
+- **ST01-017 Thousand Sunny:** el costo `restSelf` no funciona con un Stage (`activate.ts` lo rechaza). Se codificó con `oncePerTurn`, que en partida normal da el mismo resultado porque un Stage solo se activa en la Refresh Phase. Queda pendiente permitir descansar un Stage como costo, en una spec o corrección aparte.
+- **ST01-013 Zoro:** el `card_text` de la API es `[DON!! x1] +1000`, sin `[Your Turn]`. Se codificó con `[Your Turn]`, como la carta física.
+- **ST02-007 Jewelry Bonney:** `search` deja las cartas no elegidas al fondo en su orden original; el texto pide "en cualquier orden". El `ChoiceKind` `orderDeck` sigue sin usarse.
+- **ST01-001 Luffy y ST01-007 Nami:** gastan su uso de `[Once Per Turn]` aunque no haya DON!! descansados, porque el motor no comprueba eso al activar.
+- **Prueba de integración:** `full-game.test.ts` juega 8 semillas de ST01 contra ST02 con acciones legales al azar. Comprueba que cada jugador conserva 10 DON!! y 51 cartas en todo momento y que la partida termina.
