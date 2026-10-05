@@ -38,6 +38,7 @@ export type EffectStep =
   | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
   | { op: 'restDon'; player: PlayerId; amount: number }
   | { op: 'activateDon'; player: PlayerId; amount: number }
+  | { op: 'blockerLock'; attacker?: string; minPower?: number; duration: Duration }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {
@@ -78,6 +79,14 @@ export interface QueuedEffect {
 export interface Modifier {
   target: string
   power: number
+  duration: Duration
+  sourceId: string
+
+}
+
+export interface Restriction {
+  attacker?: string
+  minPower?: number
   duration: Duration
   sourceId: string
 
@@ -160,6 +169,7 @@ export interface GameState {
   pending: PendingChoice | null
   effectQueue: QueuedEffect[]
   modifiers: Modifier[]
+  restrictions: Restriction[]
   oncePerTurnUsed: string[]
 
 }

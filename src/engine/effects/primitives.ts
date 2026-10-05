@@ -225,6 +225,8 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return restDon(state, step.player, step.amount, events)
     case 'activateDon':
       return activateDon(state, step.player, step.amount, events)
+    case 'blockerLock':
+      return { ...state, restrictions: [...state.restrictions, { attacker: step.attacker, minPower: step.minPower, duration: step.duration, sourceId: queued.source }] }
     default:
       throw new Error(`Primitiva no implementada: ${step.op}`)
   }

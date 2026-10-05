@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { apply } from '../../src/engine/actions'
 import { resolveQueue } from '../../src/engine/effects'
 import { hasTrait } from '../../src/engine/effects/targets'
+import { getLegalActions } from '../../src/engine/queries'
 import { BLOCKER_ID, defs } from './fixtures'
 import { card, inPlay, startGame, withPlayer } from './helpers'
 import type { CardDef, EffectStep, GameEvent, GameState } from '../../src/engine/types'
@@ -148,6 +150,58 @@ describe('primitiva search con trait', () => {
     const state = withPlayer(stage(), 'p1', { deck: [card('p1', 'T-C01', 90), card('p1', TRAIT_ID, 91)] })
 
     expect(() => run(state, { op: 'search', player: 'p1', amount: 2, trait: 'Supernovas', pick: 'p1-t90' })).toThrow(/filtro/)
+
+  })
+
+})
+
+
+
+describe('primitiva blockerLock', () => {
+
+  function battle(steps: EffectStep[], attackTarget = 'leader'): GameState {
+    const locked = run(stage(), ...steps).state
+
+    return apply(locked, { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: attackTarget }).state
+
+  }
+
+  it('impide declarar cualquier Blocker durante la batalla', () => {
+    const state = battle([{ op: 'blockerLock', duration: 'thisBattle' }])
+
+    expect(() => apply(state, { type: 'DeclareBlock', player: 'p2', blockerId: 'p2-t3' })).toThrow(/no puede bloquear/)
+    expect(getLegalActions(state, 'p2').some(action => action.type === 'DeclareBlock')).toBe(false)
+
+  })
+
+
+  it('con minPower solo bloquea el que tiene menos power', () => {
+    const state = battle([{ op: 'blockerLock', minPower: 3000, duration: 'thisBattle' }])
+    const low   = battle([{ op: 'blockerLock', minPower: 4000, duration: 'thisBattle' }])
+
+    expect(getLegalActions(state, 'p2').some(action => action.type === 'DeclareBlock')).toBe(false)
+    expect(getLegalActions(low, 'p2').some(action => action.type === 'DeclareBlock')).toBe(true)
+
+  })
+
+
+  it('con attacker solo afecta a ese atacante durante el turno', () => {
+    const other = battle([{ op: 'blockerLock', attacker: 'p1-t99', duration: 'thisTurn' }])
+    const mine  = battle([{ op: 'blockerLock', attacker: 'p1-t1', duration: 'thisTurn' }])
+
+    expect(getLegalActions(other, 'p2').some(action => action.type === 'DeclareBlock')).toBe(true)
+    expect(getLegalActions(mine, 'p2').some(action => action.type === 'DeclareBlock')).toBe(false)
+
+  })
+
+
+  it('thisBattle se limpia al terminar la batalla; thisTurn no', () => {
+    const state   = battle([{ op: 'blockerLock', duration: 'thisBattle' }, { op: 'blockerLock', attacker: 'p1-t1', duration: 'thisTurn' }])
+    const passed  = apply(state, { type: 'PassBlock', player: 'p2' }).state
+    const ended   = apply(passed, { type: 'PassCounter', player: 'p2' }).state
+
+    expect(ended.restrictions).toHaveLength(1)
+    expect(ended.restrictions[0].duration).toBe('thisTurn')
 
   })
 

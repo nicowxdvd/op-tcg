@@ -41,7 +41,7 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
     return battle.triggerCard ? [{ type: 'RevealTrigger', player: playerId }, { type: 'PassTrigger', player: playerId }] : []
 
   if (battle.step === 'block') {
-    const blockers = player.characters.filter(character => !character.rested && state.defs[character.card.defId].keywords.includes('Blocker'))
+    const blockers = player.characters.filter(character => !character.rested && state.defs[character.card.defId].keywords.includes('Blocker') && !isBlockLocked(state, character.card.instanceId))
 
     return [...blockers.map((character): Action => ({ type: 'DeclareBlock', player: playerId, blockerId: character.card.instanceId })), { type: 'PassBlock', player: playerId }]
 
@@ -79,6 +79,19 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
   const attaches  = targets.map((target): Action => ({ type: 'AttachDon', player: playerId, target }))
 
   return [...plays, ...spells, ...attaches, ...activateActions(state, playerId), ...attackActions(state, playerId), { type: 'PassPhase', player: playerId }]
+
+}
+
+
+export function isBlockLocked(state: GameState, blockerId: string): boolean {
+  const battle = state.battle
+
+  if (!battle)
+    return false
+
+  const attackerId = battle.attacker === 'leader' ? state.players[battle.attackerPlayer].leader.instanceId : battle.attacker
+
+  return state.restrictions.some(restriction => (!restriction.attacker || restriction.attacker === attackerId) && (restriction.minPower === undefined || getPower(state, blockerId) >= restriction.minPower))
 
 }
 

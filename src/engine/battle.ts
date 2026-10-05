@@ -1,6 +1,6 @@
 import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId } from './types'
 import { opponentOf, requireMain } from './state'
-import { getPower } from './queries'
+import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
 import { fireEffects } from './effects'
 
@@ -68,6 +68,8 @@ export function declareBlock(state: GameState, action: DeclareBlockAction): Appl
     throw new Error(`El Character ${action.blockerId} no está en juego`)
   if (!state.defs[blocker.card.defId].keywords.includes('Blocker'))
     throw new Error(`El Character ${action.blockerId} no tiene Blocker`)
+  if (isBlockLocked(state, blocker.card.instanceId))
+    throw new Error(`El Character ${action.blockerId} no puede bloquear en esta batalla`)
   if (blocker.rested)
     throw new Error(`El Character ${action.blockerId} está descansado y no puede bloquear`)
 

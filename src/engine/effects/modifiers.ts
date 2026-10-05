@@ -13,6 +13,6 @@ export function modifierPower(state: GameState, instanceId: string): number {
 
 
 export function clearModifiers(state: GameState, duration: Duration): GameState {
-  return { ...state, modifiers: state.modifiers.filter(modifier => modifier.duration !== duration) }
+  return { ...state, modifiers: state.modifiers.filter(modifier => modifier.duration !== duration), restrictions: state.restrictions.filter(restriction => restriction.duration !== duration) }
 
 }
