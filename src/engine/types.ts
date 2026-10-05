@@ -34,6 +34,9 @@ export type EffectStep =
   | { op: 'toHand'; player: PlayerId; instanceId: string }
   | { op: 'discard'; player: PlayerId; instanceId: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
+  | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
+  | { op: 'restDon'; player: PlayerId; amount: number }
+  | { op: 'activateDon'; player: PlayerId; amount: number }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {
@@ -211,6 +214,7 @@ export type GameEvent =
   | { type: 'EffectActivated'; player: PlayerId; source: string; index: number }
   | { type: 'CardDiscarded'; player: PlayerId; instanceId: string }
   | { type: 'DonRested'; player: PlayerId; amount: number }
+  | { type: 'DonActivated'; player: PlayerId; amount: number }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'TriggerAvailable'; player: PlayerId; instanceId: string }
   | { type: 'TriggerRevealed'; player: PlayerId; instanceId: string }

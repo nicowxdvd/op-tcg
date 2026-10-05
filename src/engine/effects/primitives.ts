@@ -149,6 +149,53 @@ function toHand(state: GameState, id: PlayerId, instanceId: string, events: Game
 }
 
 
+function attachDon(state: GameState, id: PlayerId, target: string, amount: number, events: GameEvent[]): GameState {
+  const player   = state.players[id]
+  const isLeader = player.leader.instanceId === target
+  const attached = player.characters.find(candidate => candidate.card.instanceId === target)
+
+  if (!isLeader && !attached)
+    throw new Error(`La carta ${target} no está en el área de ${id}`)
+
+  const moved = Math.min(amount, player.donRested)
+  const base  = { ...player, donRested: player.donRested - moved }
+
+  for (let i = 0; i < moved; i++)
+    events.push({ type: 'DonAttached', player: id, target })
+
+  return setPlayer(state, id, isLeader ? { ...base, leaderAttachedDon: player.leaderAttachedDon + moved } : { ...base, characters: player.characters.map(candidate => candidate === attached ? { ...candidate, attachedDon: candidate.attachedDon + moved } : candidate) })
+
+}
+
+
+function restDon(state: GameState, id: PlayerId, amount: number, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = Math.min(amount, player.donActive)
+
+  if (!moved)
+    return state
+
+  events.push({ type: 'DonRested', player: id, amount: moved })
+
+  return setPlayer(state, id, { ...player, donActive: player.donActive - moved, donRested: player.donRested + moved })
+
+}
+
+
+function activateDon(state: GameState, id: PlayerId, amount: number, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = Math.min(amount, player.donRested)
+
+  if (!moved)
+    return state
+
+  events.push({ type: 'DonActivated', player: id, amount: moved })
+
+  return setPlayer(state, id, { ...player, donRested: player.donRested - moved, donActive: player.donActive + moved })
+
+}
+
+
 export function executeStep(state: GameState, step: EffectStep, queued: QueuedEffect, events: GameEvent[]): GameState {
   switch (step.op) {
     case 'draw':
@@ -171,6 +218,12 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return discard(state, step.player, step.instanceId, events)
     case 'toHand':
       return toHand(state, step.player, step.instanceId, events)
+    case 'attachDon':
+      return attachDon(state, step.player, step.target, step.amount, events)
+    case 'restDon':
+      return restDon(state, step.player, step.amount, events)
+    case 'activateDon':
+      return activateDon(state, step.player, step.amount, events)
     default:
       throw new Error(`Primitiva no implementada: ${step.op}`)
   }
