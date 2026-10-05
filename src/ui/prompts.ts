@@ -29,6 +29,22 @@ export function describeAction(state: GameState, action: Action): string {
       return nameOf(state, action.option)
     case 'PassChoice':
       return 'Skip'
+    case 'DeclareBlock':
+      return `Block with ${nameOf(state, action.blockerId)}`
+    case 'PassBlock':
+      return 'No block'
+    case 'UseCounter':
+      return `Counter: ${nameOf(state, action.instanceId)}`
+    case 'UseCounterEvent':
+      return `Counter Event: ${nameOf(state, action.instanceId)}`
+    case 'PassCounter':
+      return 'No counter'
+    case 'RevealTrigger':
+      return 'Reveal Trigger'
+    case 'PassTrigger':
+      return 'Skip Trigger'
+    case 'ActivateEffect':
+      return `Activate ${nameOf(state, action.source)} (effect ${action.index + 1})`
     case 'PlayCharacter':
       return action.replaceId ? `Replace ${nameOf(state, action.replaceId)}` : `Play ${nameOf(state, action.instanceId)}`
     default:
@@ -48,6 +64,12 @@ export function buildPrompt(state: GameState, legal: Action[], viewer: PlayerId)
     return { title: `${viewer.toUpperCase()}: keep your hand or redraw?`, options: options(legal) }
   if (state.pending)
     return { title: `${viewer.toUpperCase()}: choose (${state.pending.kind})`, options: options(legal) }
+  if (state.battle && state.battle.attackerPlayer !== viewer) {
+    const titles = { block: 'Block step', counter: 'Counter step', trigger: 'Trigger step' }
+
+    return { title: `${viewer.toUpperCase()}: ${titles[state.battle.step]}`, options: options(legal) }
+
+  }
 
   return null
 

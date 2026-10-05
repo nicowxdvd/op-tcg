@@ -1,16 +1,32 @@
 import { apply, getLegalActions, opponentOf } from '../engine'
 import type { Action, GameEvent, GameState, PlayerId } from '../engine'
+import { advanceRng, chooseAction } from '../ai'
+import type { AIPlayer } from '../ai'
 
 export type GameHandler = (events: GameEvent[]) => void
+
+
+export interface GameControllerOptions {
+  ai?: AIPlayer | null
+  rngSeed?: number
+
+}
 
 
 export class GameController {
 
   private state: GameState
   private handlers = new Set<GameHandler>()
+  private ai: AIPlayer | null
+  private rng: number
+  private timer: ReturnType<typeof setTimeout> | null = null
+  private disposed = false
 
-  constructor(initial: GameState) {
+  constructor(initial: GameState, options: GameControllerOptions = {}) {
     this.state = initial
+    this.ai = options.ai ?? null
+    this.rng = options.rngSeed ?? initial.seed
+    this.scheduleCpu()
 
   }
 
@@ -47,6 +63,66 @@ export class GameController {
 
     for (const handler of [...this.handlers])
       handler(result.events)
+
+    this.scheduleCpu()
+
+  }
+
+
+  isCpu(player: PlayerId): boolean {
+    return this.ai?.player === player
+
+  }
+
+
+  dispose(): void {
+    this.disposed = true
+
+    if (this.timer !== null)
+      clearTimeout(this.timer)
+
+    this.timer = null
+
+  }
+
+
+  private cpuDecider(): PlayerId | null {
+    const ai = this.ai
+
+    if (!ai || this.disposed || this.state.phase === 'gameOver')
+      return null
+    if (this.state.phase === 'mulligan')
+      return this.getLegal(ai.player).length > 0 ? ai.player : null
+
+    const state   = this.state
+    const decider = state.pending?.player ?? (state.battle ? opponentOf(state.battle.attackerPlayer) : state.active)
+
+    return decider === ai.player && this.getLegal(decider).length > 0 ? decider : null
+
+  }
+
+
+  private scheduleCpu(): void {
+    if (this.timer !== null || this.cpuDecider() === null)
+      return
+
+    this.timer = setTimeout(() => this.stepCpu(), this.ai!.delayMs)
+
+  }
+
+
+  private stepCpu(): void {
+    this.timer = null
+
+    const decider = this.cpuDecider()
+
+    if (decider === null)
+      return
+
+    const action = chooseAction(this.state, decider, this.rng)
+
+    this.rng = advanceRng(this.rng)
+    this.dispatch(action)
 
   }
 
