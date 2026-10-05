@@ -21,8 +21,11 @@ import { Zone } from '../ui/Zone'
 type DragSource =
   | { kind: 'hand'; id: string }
   | { kind: 'don' }
+  | { kind: 'attacker'; id: string }
 
 const PLAYABLE  = 0xffd54a
+const ATTACK    = 0xff7043
+const ACTIVATE  = 0x4dd0e1
 const NOTICE_MS = 3000
 
 
@@ -155,13 +158,31 @@ export class Board extends Phaser.Scene {
     const card    = this.layout.card
     const defOf   = (instance: CardInstance) => state.defs[instance.defId]
     const started = state.phase !== 'mulligan'
+    const attacks = new Set(own ? this.legal.flatMap(action => action.type === 'Attack' ? [action.attacker] : []) : [])
+    const uses    = new Set(own ? this.legal.flatMap(action => action.type === 'ActivateEffect' ? [action.source] : []) : [])
 
-    const place = (rect: SideLayout['leader'], instance: CardInstance, extra: Partial<CardView>) => {
+    const place = (rect: SideLayout['leader'], instance: CardInstance, extra: Partial<CardView>, attackId: string) => {
       const middle = center(rect)
       const sprite = new CardSprite(this, middle.x, middle.y, card, { def: defOf(instance), instanceId: instance.instanceId, power: started ? getPower(state, instance.instanceId) : undefined, ...extra })
 
       this.layer.add(sprite)
       this.wireZoom(sprite)
+
+      if (attacks.has(attackId)) {
+        sprite.setHighlight(ATTACK).enableInput()
+        this.input.setDraggable(sprite)
+        this.sources.set(sprite, { kind: 'attacker', id: attackId })
+      }
+      else if (uses.has(instance.instanceId)) {
+        sprite.setHighlight(ACTIVATE)
+      }
+
+      if (uses.has(instance.instanceId))
+        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.leftButtonReleased() && pointer.getDistance() < 6)
+            this.activate(instance.instanceId)
+
+        })
 
     }
 
@@ -174,11 +195,11 @@ export class Board extends Phaser.Scene {
       if (zone.sprite)
         this.wireZoom(zone.sprite)
 
-    place(side.leader, data.leader, { rested: data.leaderRested, don: data.leaderAttachedDon })
+    place(side.leader, data.leader, { rested: data.leaderRested, don: data.leaderAttachedDon }, 'leader')
 
     data.characters.forEach((character, i) => {
       this.layer.add(new Zone(this, side.slots[i], '', null, null, card))
-      place(side.slots[i], character.card, { rested: character.rested, don: character.attachedDon })
+      place(side.slots[i], character.card, { rested: character.rested, don: character.attachedDon }, character.card.instanceId)
 
     })
 
@@ -292,7 +313,7 @@ export class Board extends Phaser.Scene {
 
   private actionsAt(source: DragSource, x: number, y: number): Action[] {
     const state = this.controller.getState()
-    const { self } = this.layout
+    const { self, rival } = this.layout
 
     if (source.kind === 'hand') {
       const card = state.players[this.viewer].hand.find(candidate => candidate.instanceId === source.id)
@@ -302,9 +323,27 @@ export class Board extends Phaser.Scene {
 
     }
 
-    const target = this.targetAt(self, state.players[this.viewer], x, y)
+    if (source.kind === 'don') {
+      const target = this.targetAt(self, state.players[this.viewer], x, y)
 
-    return target ? this.legal.filter(action => action.type === 'AttachDon' && action.target === target) : []
+      return target ? this.legal.filter(action => action.type === 'AttachDon' && action.target === target) : []
+
+    }
+
+    const target = this.targetAt(rival, state.players[opponentOf(this.viewer)], x, y)
+
+    return target ? this.legal.filter(action => action.type === 'Attack' && action.attacker === source.id && action.target === target) : []
+
+  }
+
+
+  private activate(source: string) {
+    const actions = this.legal.filter(action => action.type === 'ActivateEffect' && action.source === source)
+
+    if (actions.length === 1)
+      this.send(actions[0])
+    else if (actions.length > 1)
+      this.showDialog('Activate which effect?', actions.map(action => ({ label: describeAction(this.controller.getState(), action), run: () => this.send(action) })))
 
   }
 
