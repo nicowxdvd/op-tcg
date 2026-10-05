@@ -2,8 +2,10 @@ import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId }
 import { opponentOf, requireMain } from './state'
 import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
+import { fireEffects, resolveQueue } from './effects'
 import { hasKeyword } from './effects/passive'
-import { fireEffects } from './effects'
+import { findFieldCard } from './effects/targets'
+import { queueEffects } from './effects/timing'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
@@ -55,7 +57,10 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
   const events: GameEvent[] = [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }]
   const source              = fromLeader ? { instanceId: player.leader.instanceId, defId: player.leader.defId, owner: action.player, attachedDon: player.leaderAttachedDon } : { instanceId: character!.card.instanceId, defId: character!.card.defId, owner: action.player, attachedDon: character!.attachedDon }
 
-  return { state: fireEffects({ ...state, players: { ...state.players, [action.player]: rested }, battle }, 'whenAttacking', source, events), events }
+  const started = { ...state, players: { ...state.players, [action.player]: rested }, battle }
+  const queued  = queueEffects(started, 'whenAttacking', source, events)
+
+  return { state: resolveQueue(action.target === 'leader' ? queued : queueEffects(queued, 'onBattle', source, events), events), events }
 
 }
 
@@ -76,7 +81,11 @@ export function declareBlock(state: GameState, action: DeclareBlockAction): Appl
 
   const rested = { ...player, characters: player.characters.map(candidate => candidate === blocker ? { ...candidate, rested: true } : candidate) }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: rested }, battle: { ...battle, target: action.blockerId, step: 'counter' } }, events: [{ type: 'BlockDeclared', player: action.player, blockerId: action.blockerId }] }
+  const events: GameEvent[] = [{ type: 'BlockDeclared', player: action.player, blockerId: action.blockerId }]
+  const blocked             = { ...state, players: { ...state.players, [action.player]: rested }, battle: { ...battle, target: action.blockerId, step: 'counter' as const } }
+  const attacker            = findFieldCard(blocked, battle.attacker === 'leader' ? state.players[battle.attackerPlayer].leader.instanceId : battle.attacker)
+
+  return { state: attacker ? fireEffects(blocked, 'onBattle', { instanceId: attacker.instanceId, defId: attacker.defId, owner: attacker.owner, attachedDon: attacker.attachedDon }, events) : blocked, events }
 
 }
 

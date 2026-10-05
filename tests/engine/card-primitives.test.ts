@@ -48,7 +48,6 @@ describe('hasTrait', () => {
 })
 
 
-
 describe('primitiva attachDon', () => {
 
   it('pasa DON!! descansados al Character', () => {
@@ -87,7 +86,6 @@ describe('primitiva attachDon', () => {
   })
 
 })
-
 
 
 describe('primitivas restDon y activateDon', () => {
@@ -129,7 +127,6 @@ describe('primitivas restDon y activateDon', () => {
 })
 
 
-
 describe('primitiva search con trait', () => {
 
   it('solo ofrece cartas del tope que tienen el tipo', () => {
@@ -161,7 +158,6 @@ describe('primitiva search con trait', () => {
   })
 
 })
-
 
 
 describe('primitiva blockerLock', () => {
@@ -215,7 +211,6 @@ describe('primitiva blockerLock', () => {
 })
 
 
-
 describe('primitiva playSelf', () => {
 
   function trashed(extra: Partial<GameState['players']['p1']> = {}): GameState {
@@ -267,7 +262,6 @@ describe('primitiva playSelf', () => {
   })
 
 })
-
 
 
 describe('efectos pasivos', () => {
@@ -337,6 +331,46 @@ describe('efectos pasivos', () => {
     expect(getPower(state, 'p1-t1')).toBe(defs['T-C04'].power)
     expect(hasKeyword(state, 'p2-t3', 'Blocker')).toBe(true)
     expect(hasKeyword(state, 'p1-t1', 'Rush')).toBe(false)
+
+  })
+
+})
+
+
+describe('timing onBattle', () => {
+
+  function hawkins(): GameState {
+    const effects = { 'T-C04': [{ timing: 'onBattle', run: ctx => [{ op: 'activate', target: ctx.source }] } as EffectDef] }
+
+    return stage(effects)
+
+  }
+
+  it('se dispara al atacar a un Character y deja al atacante activo', () => {
+    const result = apply(hawkins(), { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: 'p2-t2' })
+
+    expect(result.events.filter(event => event.type === 'EffectTriggered')).toEqual([{ type: 'EffectTriggered', player: 'p1', source: 'p1-t1', timing: 'onBattle' }])
+    expect(result.state.players.p1.characters[0].rested).toBe(false)
+
+  })
+
+
+  it('no se dispara al atacar al Leader sin que nadie bloquee', () => {
+    const result = apply(hawkins(), { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: 'leader' })
+
+    expect(result.events.filter(event => event.type === 'EffectTriggered')).toEqual([])
+    expect(result.state.players.p1.characters[0].rested).toBe(true)
+
+  })
+
+
+  it('se dispara cuando un Blocker rival toma el ataque al Leader', () => {
+    const attacked = apply(hawkins(), { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: 'leader' }).state
+    const blocked  = apply(attacked, { type: 'DeclareBlock', player: 'p2', blockerId: 'p2-t3' })
+
+    expect(blocked.events.filter(event => event.type === 'EffectTriggered')).toHaveLength(1)
+    expect(blocked.state.players.p1.characters[0].rested).toBe(false)
+    expect(blocked.state.battle).toMatchObject({ target: 'p2-t3', step: 'counter' })
 
   })
 

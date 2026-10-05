@@ -20,7 +20,7 @@ export interface CardDef {
 
 }
 
-export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main' | 'passive'
+export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main' | 'passive' | 'onBattle'
 
 export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
 
