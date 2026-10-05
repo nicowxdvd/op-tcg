@@ -1,6 +1,7 @@
 import type { Action, GameState, PlayerId } from './types'
 import { activateError } from './effects/activate'
 import { modifierPower } from './effects/modifiers'
+import { hasKeyword, passivePower } from './effects/passive'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
@@ -11,7 +12,7 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
 
   const player    = state.players[playerId]
   const rival     = state.players[opponentOf(playerId)]
-  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || state.defs[character.card.defId].keywords.includes('Rush'))).map(character => character.card.instanceId)]
+  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush'))).map(character => character.card.instanceId)]
   const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
 
   return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
@@ -41,7 +42,7 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
     return battle.triggerCard ? [{ type: 'RevealTrigger', player: playerId }, { type: 'PassTrigger', player: playerId }] : []
 
   if (battle.step === 'block') {
-    const blockers = player.characters.filter(character => !character.rested && state.defs[character.card.defId].keywords.includes('Blocker'))
+    const blockers = player.characters.filter(character => !character.rested && hasKeyword(state, character.card.instanceId, 'Blocker') && !isBlockLocked(state, character.card.instanceId))
 
     return [...blockers.map((character): Action => ({ type: 'DeclareBlock', player: playerId, blockerId: character.card.instanceId })), { type: 'PassBlock', player: playerId }]
 
@@ -83,6 +84,19 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
 }
 
 
+export function isBlockLocked(state: GameState, blockerId: string): boolean {
+  const battle = state.battle
+
+  if (!battle)
+    return false
+
+  const attackerId = battle.attacker === 'leader' ? state.players[battle.attackerPlayer].leader.instanceId : battle.attacker
+
+  return state.restrictions.some(restriction => (!restriction.attacker || restriction.attacker === attackerId) && (restriction.minPower === undefined || getPower(state, blockerId) >= restriction.minPower))
+
+}
+
+
 function powerOf(state: GameState, defId: string, owner: PlayerId, attachedDon: number): number {
   return state.defs[defId].power + (owner === state.active ? attachedDon * DON_POWER : 0)
 
@@ -95,9 +109,9 @@ export function getPower(state: GameState, instanceId: string): number {
     const character = player.characters.find(candidate => candidate.card.instanceId === instanceId)
 
     if (player.leader.instanceId === instanceId)
-      return powerOf(state, player.leader.defId, id, player.leaderAttachedDon) + modifierPower(state, instanceId)
+      return powerOf(state, player.leader.defId, id, player.leaderAttachedDon) + modifierPower(state, instanceId) + passivePower(state, instanceId)
     if (character)
-      return powerOf(state, character.card.defId, id, character.attachedDon) + modifierPower(state, instanceId)
+      return powerOf(state, character.card.defId, id, character.attachedDon) + modifierPower(state, instanceId) + passivePower(state, instanceId)
   }
 
   throw new Error(`La carta ${instanceId} no está en juego`)

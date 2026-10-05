@@ -16,10 +16,11 @@ export interface CardDef {
   life: number
   colors: string[]
   keywords: Keyword[]
+  traits?: string
 
 }
 
-export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main'
+export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main' | 'passive' | 'onBattle'
 
 export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
 
@@ -29,11 +30,16 @@ export type EffectStep =
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
-  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; pick?: string | null }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; trait?: string; pick?: string | null }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
   | { op: 'discard'; player: PlayerId; instanceId: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
+  | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
+  | { op: 'restDon'; player: PlayerId; amount: number }
+  | { op: 'activateDon'; player: PlayerId; amount: number }
+  | { op: 'blockerLock'; attacker?: string; minPower?: number; duration: Duration }
+  | { op: 'playSelf'; player: PlayerId; instanceId: string; replace?: string }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {
@@ -51,12 +57,20 @@ export interface EffectCost {
 
 }
 
+export interface Aura {
+  power?: number
+  keyword?: Keyword
+  affects?: (ctx: EffectContext, candidate: string) => boolean
+
+}
+
 export interface EffectDef {
   timing: Timing
   donRequired?: number
   turn?: 'yours' | 'opponents'
   oncePerTurn?: boolean
   cost?: EffectCost
+  aura?: Aura
   condition?: (ctx: EffectContext) => boolean
   run: (ctx: EffectContext) => EffectStep[]
 
@@ -74,6 +88,14 @@ export interface QueuedEffect {
 export interface Modifier {
   target: string
   power: number
+  duration: Duration
+  sourceId: string
+
+}
+
+export interface Restriction {
+  attacker?: string
+  minPower?: number
   duration: Duration
   sourceId: string
 
@@ -156,6 +178,7 @@ export interface GameState {
   pending: PendingChoice | null
   effectQueue: QueuedEffect[]
   modifiers: Modifier[]
+  restrictions: Restriction[]
   oncePerTurnUsed: string[]
 
 }
@@ -211,6 +234,7 @@ export type GameEvent =
   | { type: 'EffectActivated'; player: PlayerId; source: string; index: number }
   | { type: 'CardDiscarded'; player: PlayerId; instanceId: string }
   | { type: 'DonRested'; player: PlayerId; amount: number }
+  | { type: 'DonActivated'; player: PlayerId; amount: number }
   | { type: 'PowerModified'; target: string; amount: number; duration: Duration }
   | { type: 'TriggerAvailable'; player: PlayerId; instanceId: string }
   | { type: 'TriggerRevealed'; player: PlayerId; instanceId: string }

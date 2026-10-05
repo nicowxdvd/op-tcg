@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadCards, loadDeck, loadDefs } from '../../src/data'
+import { effectRegistry, loadCards, loadDeck, loadDefs } from '../../src/data'
 import { createGame, validateDeck } from '../../src/engine/state'
 
 const DECK_IDS = ['st01', 'st02']
@@ -19,6 +19,14 @@ describe('mazos Starter Deck', () => {
 
   it('loadDeck falla con un mazo desconocido', () => {
     expect(() => loadDeck('st99')).toThrow('st99')
+
+  })
+
+
+  it('createGame with the effect registry keeps it in the state', () => {
+    const state = createGame({ seed: 1, defs, decks: { p1: loadDeck('st01'), p2: loadDeck('st02') }, effects: effectRegistry })
+
+    expect(state.effects).toBe(effectRegistry)
 
   })
 

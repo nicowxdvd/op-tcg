@@ -20,7 +20,14 @@ describe('cardFromApi', () => {
   it('convierte un Character con counter', () => {
     const def = cardFromApi(api({ card_cost: '3', card_power: '5000', counter_amount: 1000 }))
 
-    expect(def).toEqual({ id: 'ST01-006', name: 'Tony Tony.Chopper', type: 'Character', cost: 3, power: 5000, counter: 1000, life: 0, colors: ['Red'], keywords: [] })
+    expect(def).toEqual({ id: 'ST01-006', name: 'Tony Tony.Chopper', type: 'Character', cost: 3, power: 5000, counter: 1000, life: 0, colors: ['Red'], keywords: [], traits: 'Animal' })
+
+  })
+
+
+  it('conserva los tipos (sub_types) como texto, o vacío si faltan', () => {
+    expect(cardFromApi(api({ sub_types: 'Straw Hat Crew Supernovas' })).traits).toBe('Straw Hat Crew Supernovas')
+    expect(cardFromApi(api({ sub_types: null })).traits).toBe('')
 
   })
 

@@ -59,6 +59,7 @@ export function cardFromApi(card: ApiCard): CardDef {
     life: toNumber(id, 'life', card.life),
     colors: card.card_color.split('/').map(color => color.trim()),
     keywords: keywordsFromText(card.card_text),
+    traits: card.sub_types ?? '',
   }
 
 }

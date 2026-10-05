@@ -1,10 +1,13 @@
 import type { EffectStep, GameEvent, GameState, Timing } from '../types'
 import { CHOICE } from './binding'
+import { MAX_CHARACTERS } from '../state'
 import { executeStep } from './primitives'
+import { hasTrait } from './targets'
 import { queueEffects, type EffectSource } from './timing'
 
 type SearchStep = Extract<EffectStep, { op: 'search' }>
 type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
+type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
 
 export type { EffectSource } from './timing'
 
@@ -23,12 +26,23 @@ function expandTrash(state: GameState, step: TrashStep): EffectStep[] {
 
 function expandSearch(state: GameState, step: SearchStep): EffectStep[] {
   const top     = state.players[step.player].deck.slice(0, step.amount)
-  const options = top.filter(candidate => !step.type || state.defs[candidate.defId].type === step.type).map(candidate => candidate.instanceId)
+  const options = top.filter(candidate => (!step.type || state.defs[candidate.defId].type === step.type) && (!step.trait || hasTrait(state.defs[candidate.defId], step.trait))).map(candidate => candidate.instanceId)
 
   if (!options.length)
     return [{ ...step, pick: null }]
 
   return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: true, then: [{ ...step, pick: CHOICE }], otherwise: [{ ...step, pick: null }] }]
+
+}
+
+
+function expandPlay(state: GameState, step: PlayStep): EffectStep[] {
+  const options = state.players[step.player].characters.map(candidate => candidate.card.instanceId)
+
+  if (options.length < MAX_CHARACTERS)
+    return [{ ...step, replace: '' }]
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: false, then: [{ ...step, replace: CHOICE }] }]
 
 }
 
@@ -47,6 +61,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'search' && step.pick === undefined) {
         steps = [...expandSearch(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'playSelf' && step.replace === undefined) {
+        steps = [...expandPlay(next, step), ...others]
 
         continue
 
