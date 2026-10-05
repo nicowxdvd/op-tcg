@@ -1,6 +1,7 @@
 import type { EffectStep, GameEvent, GameState, Timing } from '../types'
 import { CHOICE } from './binding'
 import { executeStep } from './primitives'
+import { hasTrait } from './targets'
 import { queueEffects, type EffectSource } from './timing'
 
 type SearchStep = Extract<EffectStep, { op: 'search' }>
@@ -23,7 +24,7 @@ function expandTrash(state: GameState, step: TrashStep): EffectStep[] {
 
 function expandSearch(state: GameState, step: SearchStep): EffectStep[] {
   const top     = state.players[step.player].deck.slice(0, step.amount)
-  const options = top.filter(candidate => !step.type || state.defs[candidate.defId].type === step.type).map(candidate => candidate.instanceId)
+  const options = top.filter(candidate => (!step.type || state.defs[candidate.defId].type === step.type) && (!step.trait || hasTrait(state.defs[candidate.defId], step.trait))).map(candidate => candidate.instanceId)
 
   if (!options.length)
     return [{ ...step, pick: null }]

@@ -16,6 +16,7 @@ export interface CardDef {
   life: number
   colors: string[]
   keywords: Keyword[]
+  traits?: string
 
 }
 
@@ -29,7 +30,7 @@ export type EffectStep =
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
-  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; pick?: string | null }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; trait?: string; pick?: string | null }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
   | { op: 'discard'; player: PlayerId; instanceId: string }
