@@ -1,6 +1,6 @@
 # SPEC 10 — Efectos de las cartas de ST01 y ST02
 
-> **Estado:** Borrador
+> **Estado:** Aprobado
 > **Depende de:** SPEC 04, SPEC 05
 > **Fecha:** 2026-10-02
 > **Objetivo:** Codificar con el DSL de SPEC 04 los efectos de todas las cartas de los Starter Decks ST01 (Straw Hat Crew) y ST02 (Worst Generation), de modo que las partidas con los mazos reales apliquen el texto de cada carta.
@@ -64,7 +64,51 @@ Inventario (se completa en el paso 1 con la respuesta real de la API de SPEC 05)
 
 | Carta | Tipo | Texto oficial | Primitivas necesarias | Estado |
 | ----- | ---- | ------------- | --------------------- | ------ |
-| (se llena en el paso 1 con las cartas distintas de ST01 y ST02) | | | | Pendiente |
+| ST01-001 Monkey.D.Luffy | Leader | [Activate: Main] [Once Per Turn] Give this Leader or 1 of your Characters up to 1 rested DON!! card. | `attachDon` (nueva) | Pendiente |
+| ST01-002 Usopp | Character | [DON!! x2] [When Attacking] Your opponent cannot activate a [Blocker] Character that has 5000 or more power during this battle. [Trigger] Play this card. | `blockerLock` y `playSelf` (nuevas) | Pendiente |
+| ST01-003 Karoo | Character | (sin texto) | vanilla | Pendiente |
+| ST01-004 Sanji | Character | [DON!! x2] This Character gains [Rush]. | `grantKeyword` pasivo (nueva) | Pendiente |
+| ST01-005 Jinbe | Character | [DON!! x1] [When Attacking] Up to 1 of your Leader or Character cards other than this card gains +1000 power during this turn. | `power`, `choose` | Pendiente |
+| ST01-006 Tony Tony.Chopper | Character | [Blocker] | keyword `Blocker` (SPEC 04), lista vacía | Pendiente |
+| ST01-007 Nami | Character | [Activate: Main] [Once Per Turn] Give up to 1 rested DON!! card to your Leader or 1 of your Characters. | `attachDon` (nueva) | Pendiente |
+| ST01-008 Nico Robin | Character | (sin texto) | vanilla | Pendiente |
+| ST01-009 Nefeltari Vivi | Character | (sin texto) | vanilla | Pendiente |
+| ST01-010 Franky | Character | (sin texto) | vanilla | Pendiente |
+| ST01-011 Brook | Character | [On Play] Give up to 2 rested DON!! cards to your Leader or 1 of your Characters. | `attachDon` (nueva) | Pendiente |
+| ST01-012 Monkey.D.Luffy | Character | [Rush] [DON!! x2] [When Attacking] Your opponent cannot activate [Blocker] during this battle. | keyword `Rush`, `blockerLock` (nueva) | Pendiente |
+| ST01-013 Roronoa Zoro | Character | [DON!! x1] This Character gains +1000 power. | `passivePower` (nueva) | Pendiente |
+| ST01-014 Guard Point | Event | [Counter] Up to 1 of your Leader or Character cards gains +3000 power during this battle. [Trigger] Up to 1 of your Leader or Character cards gains +1000 power during this turn. | `power`, `choose` | Pendiente |
+| ST01-015 Gum-Gum Jet Pistol | Event | [Main] K.O. up to 1 of your opponent's Characters with 6000 power or less. [Trigger] Activate this card's [Main] effect. | `ko`, `choose`; el Trigger reutiliza la función del Main | Pendiente |
+| ST01-016 Diable Jambe | Event | [Main] Select up to 1 of your {Straw Hat Crew} type Leader or Character cards. Your opponent cannot activate [Blocker] if that Leader or Character attacks during this turn. [Trigger] K.O. up to 1 of your opponent's [Blocker] Characters with a cost of 3 or less. | `blockerLock` (nueva), `ko`, `choose`, tipos (`traits`, nuevo en `CardDef`) | Pendiente |
+| ST01-017 Thousand Sunny | Stage | [Activate: Main] You may rest this Stage: Up to 1 {Straw Hat Crew} type Leader or Character card on your field gains +1000 power during this turn. | `power`, `choose`, costo `restSelf`, `traits` | Pendiente |
+| ST02-001 Eustass"Captain"Kid | Leader | [Activate: Main] [Once Per Turn] (3) You may trash 1 card from your hand: Set this Leader as active. | `activate`, costo `restDon` y `trashFromHand` | Pendiente |
+| ST02-002 Vito | Character | (sin texto) | vanilla | Pendiente |
+| ST02-003 Urouge | Character | [DON!! x1] If you have 3 or more Characters, this card gains +2000 power. | `passivePower` con condición (nueva) | Pendiente |
+| ST02-004 Capone"Gang"Bege | Character | [Blocker] | keyword `Blocker`, lista vacía | Pendiente |
+| ST02-005 Killer | Character | [On Play] K.O. up to 1 of your opponent's rested Characters with a cost of 3 or less. [Trigger] Play this card. | `ko`, `choose`, `playSelf` (nueva) | Pendiente |
+| ST02-006 Koby | Character | (sin texto) | vanilla | Pendiente |
+| ST02-007 Jewelry Bonney | Character | [Activate: Main] (1) You may rest this card: Look at 5 cards from the top of your deck; reveal up to 1 "Supernovas" type card and add it to your hand. Then, place the rest at the bottom of your deck in any order. | `search` con filtro por tipo `traits` (cambia), costo `restDon` y `restSelf`, `choose` `orderDeck` | Pendiente |
+| ST02-008 Scratchmen Apoo | Character | [DON!! x1] [When Attacking] Rest up to 1 of your opponent's DON!! cards. | `restDon` (nueva) | Pendiente |
+| ST02-009 Trafalgar Law | Character | [On Play] Set up to 1 of your "Supernovas" or "Heart Pirates" type rested Characters with a cost of 5 or less as active. | `activate`, `choose`, `traits` | Pendiente |
+| ST02-010 Basil Hawkins | Character | [DON!! x1] [Once Per Turn] [Your Turn] If this Character battles your opponent's Character, set this card as active. | timing `onBattle` (nuevo), `activate` | Pendiente |
+| ST02-011 Heat | Character | (sin texto) | vanilla | Pendiente |
+| ST02-012 Bepo | Character | (sin texto) | vanilla | Pendiente |
+| ST02-013 Eustass"Captain"Kid | Character | [Blocker] [DON!! x1] [End of Your Turn] Set this card as active. (errata oficial) | keyword `Blocker`, `activate` en `endOfYourTurn` | Pendiente |
+| ST02-014 X.Drake | Character | [DON!! x1] [Your Turn] If this Character is rested, your "Supernovas" or "Navy" type Leaders and Characters gain +1000 power. | `passivePower` con condición y alcance múltiple (nueva), `traits` | Pendiente |
+| ST02-015 Scalpel | Event | [Counter] Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, set up to 1 of your DON!! cards as active. [Trigger] Set up to 2 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Pendiente |
+| ST02-016 Repel | Event | [Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, set up to 1 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Pendiente |
+| ST02-017 Straw Sword | Event | [Main] Rest up to 1 of your opponent's Characters. | `rest`, `choose` | Pendiente |
+
+Hallazgos del paso 1 (lo que el DSL de SPEC 04 no cubre y el paso 2 debe agregar):
+
+- `attachDon`: dar DON!! descansados a un Leader o Character (ST01-001, 007 y 011).
+- `passivePower` y `grantKeyword`: efectos continuos con condición (`DON!! xN`, cantidad de Characters, Character descansado). SPEC 04 solo modela efectos disparados por timing (ST01-004, ST01-013, ST02-003 y ST02-014).
+- `blockerLock`: impedir Blocker durante la batalla, por power mínimo o durante el turno (ST01-002, 012 y 016).
+- `playSelf`: jugar la propia carta desde `[Trigger]` (ST01-002 y ST02-005).
+- `restDon` (rival) y `activateDon` (propios): ST02-008, 015 y 016.
+- Timing `onBattle`: ST02-010.
+- `CardDef` no guarda los tipos (`sub_types` del JSON). Hay que agregar `traits` en `convert.ts` y un filtro por tipo en `search` y en la selección de objetivos (ST01-016, 017 y ST02-007, 009, 014).
+- Vanilla (8 cartas): ST01-003, 008, 009, 010 y ST02-002, 006, 011, 012. Solo con keyword (2 cartas): ST01-006 y ST02-004.
 
 Reglas fijadas:
 
@@ -122,7 +166,7 @@ Reglas fijadas:
 | Riesgo | Mitigación |
 | ------ | ---------- |
 | Una carta tiene un texto que el DSL de SPEC 04 no puede expresar | El paso 1 las detecta antes de codificar. Se agregan primitivas con test en el paso 2, o se marca la carta como no soportada con su motivo. |
-| El `card_text` de la API tiene errores o cambia | Los JSON de SPEC 05 están versionados. Contrastar los casos dudosos con las Comprehensive Rules (`docs/plan.md`, sección Fuentes) y anotar la diferencia en el inventario. |
+| El `card_text` de la API tiene errores o cambia | Los JSON de SPEC 05 están versionados. Contrastar los casos dudosos con las Comprehensive Rules (https://en.onepiece-cardgame.com/pdf/rule_comprehensive.pdf) y anotar la diferencia en el inventario. |
 | Un efecto codificado mal pasa los tests porque el test repite el mismo error | Escribir cada test a partir del texto oficial y no del código, y revisar el inventario carta por carta antes de marcar `Verificada`. |
 | Muchas cartas parecidas generan código duplicado | Extraer fábricas de efectos comunes (por ejemplo "roba N", "da +N de power") en `primitives.ts` y reutilizarlas. |
 
