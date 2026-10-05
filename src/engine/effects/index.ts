@@ -1,11 +1,13 @@
 import type { EffectStep, GameEvent, GameState, Timing } from '../types'
 import { CHOICE } from './binding'
+import { MAX_CHARACTERS } from '../state'
 import { executeStep } from './primitives'
 import { hasTrait } from './targets'
 import { queueEffects, type EffectSource } from './timing'
 
 type SearchStep = Extract<EffectStep, { op: 'search' }>
 type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
+type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
 
 export type { EffectSource } from './timing'
 
@@ -34,6 +36,17 @@ function expandSearch(state: GameState, step: SearchStep): EffectStep[] {
 }
 
 
+function expandPlay(state: GameState, step: PlayStep): EffectStep[] {
+  const options = state.players[step.player].characters.map(candidate => candidate.card.instanceId)
+
+  if (options.length < MAX_CHARACTERS)
+    return [{ ...step, replace: '' }]
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: false, then: [{ ...step, replace: CHOICE }] }]
+
+}
+
+
 export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
   let next = state
 
@@ -48,6 +61,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'search' && step.pick === undefined) {
         steps = [...expandSearch(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'playSelf' && step.replace === undefined) {
+        steps = [...expandPlay(next, step), ...others]
 
         continue
 

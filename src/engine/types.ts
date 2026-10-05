@@ -39,6 +39,7 @@ export type EffectStep =
   | { op: 'restDon'; player: PlayerId; amount: number }
   | { op: 'activateDon'; player: PlayerId; amount: number }
   | { op: 'blockerLock'; attacker?: string; minPower?: number; duration: Duration }
+  | { op: 'playSelf'; player: PlayerId; instanceId: string; replace?: string }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
 export interface EffectContext {

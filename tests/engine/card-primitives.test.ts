@@ -5,14 +5,14 @@ import { hasTrait } from '../../src/engine/effects/targets'
 import { getLegalActions } from '../../src/engine/queries'
 import { BLOCKER_ID, defs } from './fixtures'
 import { card, inPlay, startGame, withPlayer } from './helpers'
-import type { CardDef, EffectStep, GameEvent, GameState } from '../../src/engine/types'
+import type { CardDef, EffectStep, EffectRegistry, GameEvent, GameState } from '../../src/engine/types'
 
 const TRAIT_ID = 'T-TR1'
 const traitDef: CardDef = { id: TRAIT_ID, name: 'Con tipos', type: 'Character', cost: 2, power: 3000, counter: 1000, life: 0, colors: ['Red'], keywords: [], traits: 'Straw Hat Crew Supernovas' }
 
-function stage(): GameState {
+function stage(effects: EffectRegistry = {}): GameState {
   const start = startGame()
-  const mine  = withPlayer({ ...start, turn: 3, active: 'p1', defs: { ...defs, [TRAIT_ID]: traitDef } }, 'p1', { characters: [inPlay(card('p1', 'T-C04', 1), 1, 0)], donActive: 2, donRested: 3 })
+  const mine  = withPlayer({ ...start, turn: 3, active: 'p1', effects, defs: { ...defs, [TRAIT_ID]: traitDef } }, 'p1', { characters: [inPlay(card('p1', 'T-C04', 1), 1, 0)], donActive: 2, donRested: 3 })
 
   return withPlayer(mine, 'p2', { characters: [{ ...inPlay(card('p2', 'T-C02', 2), 1), rested: true }, inPlay(card('p2', BLOCKER_ID, 3))], donActive: 4, donRested: 0 })
 
@@ -202,6 +202,60 @@ describe('primitiva blockerLock', () => {
 
     expect(ended.restrictions).toHaveLength(1)
     expect(ended.restrictions[0].duration).toBe('thisTurn')
+
+  })
+
+})
+
+
+
+describe('primitiva playSelf', () => {
+
+  function trashed(extra: Partial<GameState['players']['p1']> = {}): GameState {
+    const effects: EffectRegistry = { 'T-C05': [{ timing: 'onPlay', run: ctx => [{ op: 'draw', player: ctx.owner, amount: 1 }] }] }
+
+    return withPlayer(stage(effects), 'p1', { trash: [card('p1', 'T-C05', 50)], ...extra })
+
+  }
+
+  it('pone la carta del trash como Character activo y dispara su [On Play]', () => {
+    const state  = trashed()
+    const result = run(state, { op: 'playSelf', player: 'p1', instanceId: 'p1-t50' })
+    const mine   = result.state.players.p1
+
+    expect(mine.trash).toEqual([])
+    expect(mine.characters.map(item => item.card.instanceId)).toEqual(['p1-t1', 'p1-t50'])
+    expect(mine.characters[1]).toMatchObject({ rested: false, attachedDon: 0, playedTurn: 3 })
+    expect(mine.hand).toHaveLength(state.players.p1.hand.length + 1)
+    expect(result.events).toContainEqual({ type: 'CharacterPlayed', player: 'p1', instanceId: 'p1-t50' })
+
+  })
+
+
+  it('con 5 Characters pide elegir cuál reemplazar y lo manda al trash', () => {
+    const full    = Array.from({ length: 5 }, (_, i) => inPlay(card('p1', 'T-C04', i + 1), 1, i === 0 ? 2 : 0))
+    const state   = trashed({ characters: full })
+    const pending = run(state, { op: 'playSelf', player: 'p1', instanceId: 'p1-t50' }).state
+
+    expect(pending.pending).toMatchObject({ player: 'p1', kind: 'target', optional: false })
+    expect(pending.pending?.options).toHaveLength(5)
+
+    const done = apply(pending, { type: 'Choose', player: 'p1', option: 'p1-t1' }).state
+    const mine = done.players.p1
+
+    expect(mine.characters).toHaveLength(5)
+    expect(mine.characters.some(item => item.card.instanceId === 'p1-t50')).toBe(true)
+    expect(mine.trash.map(item => item.instanceId)).toEqual(['p1-t1'])
+    expect(mine.donRested).toBe(state.players.p1.donRested + 2)
+
+  })
+
+
+  it('no hace nada si la carta ya no está en el trash', () => {
+    const state  = trashed({ trash: [] })
+    const result = run(state, { op: 'playSelf', player: 'p1', instanceId: 'p1-t50' })
+
+    expect(result.state.players.p1.characters).toHaveLength(1)
 
   })
 

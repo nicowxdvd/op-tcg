@@ -1,5 +1,5 @@
 import type { CardType, CharacterInPlay, EffectStep, GameEvent, GameState, PlayerId, PlayerState, QueuedEffect } from '../types'
-import { opponentOf } from '../state'
+import { MAX_CHARACTERS, opponentOf } from '../state'
 import { addModifier } from './modifiers'
 import { hasTrait } from './targets'
 import { queueEffects } from './timing'
@@ -197,6 +197,31 @@ function activateDon(state: GameState, id: PlayerId, amount: number, events: Gam
 }
 
 
+function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: string | undefined, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const card   = player.trash.find(candidate => candidate.instanceId === instanceId)
+
+  if (!card || state.defs[card.defId].type !== 'Character')
+    return state
+
+  const replaced = player.characters.find(candidate => candidate.card.instanceId === replace)
+
+  if (player.characters.length >= MAX_CHARACTERS && !replaced)
+    throw new Error(`Con ${MAX_CHARACTERS} Characters hay que elegir uno para reemplazar`)
+
+  if (replaced)
+    events.push({ type: 'CharacterTrashed', player: id, instanceId: replaced.card.instanceId })
+
+  events.push({ type: 'CharacterPlayed', player: id, instanceId })
+
+  const trash = [...player.trash.filter(candidate => candidate !== card), ...(replaced ? [replaced.card] : [])]
+  const next  = setPlayer(state, id, { ...player, trash, characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
+
+  return queueEffects(next, 'onPlay', { instanceId, defId: card.defId, owner: id, attachedDon: 0 }, events)
+
+}
+
+
 export function executeStep(state: GameState, step: EffectStep, queued: QueuedEffect, events: GameEvent[]): GameState {
   switch (step.op) {
     case 'draw':
@@ -227,6 +252,8 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return activateDon(state, step.player, step.amount, events)
     case 'blockerLock':
       return { ...state, restrictions: [...state.restrictions, { attacker: step.attacker, minPower: step.minPower, duration: step.duration, sourceId: queued.source }] }
+    case 'playSelf':
+      return playSelf(state, step.player, step.instanceId, step.replace, events)
     default:
       throw new Error(`Primitiva no implementada: ${step.op}`)
   }
