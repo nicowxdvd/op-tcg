@@ -81,23 +81,23 @@ Inventario (se completa en el paso 1 con la respuesta real de la API de SPEC 05)
 | ST01-015 Gum-Gum Jet Pistol | Event | [Main] K.O. up to 1 of your opponent's Characters with 6000 power or less. [Trigger] Activate this card's [Main] effect. | `ko`, `choose`; el Trigger reutiliza la función del Main | Verificada |
 | ST01-016 Diable Jambe | Event | [Main] Select up to 1 of your {Straw Hat Crew} type Leader or Character cards. Your opponent cannot activate [Blocker] if that Leader or Character attacks during this turn. [Trigger] K.O. up to 1 of your opponent's [Blocker] Characters with a cost of 3 or less. | `blockerLock` (nueva), `ko`, `choose`, tipos (`traits`, nuevo en `CardDef`) | Verificada |
 | ST01-017 Thousand Sunny | Stage | [Activate: Main] You may rest this Stage: Up to 1 {Straw Hat Crew} type Leader or Character card on your field gains +1000 power during this turn. | `power`, `choose`, costo `restSelf`, `traits` | Verificada (simplificación: `oncePerTurn` en vez de descansar el Stage, el motor no permite descansar un Stage como costo) |
-| ST02-001 Eustass"Captain"Kid | Leader | [Activate: Main] [Once Per Turn] (3) You may trash 1 card from your hand: Set this Leader as active. | `activate`, costo `restDon` y `trashFromHand` | Pendiente |
-| ST02-002 Vito | Character | (sin texto) | vanilla | Pendiente |
-| ST02-003 Urouge | Character | [DON!! x1] If you have 3 or more Characters, this card gains +2000 power. | `passivePower` con condición (nueva) | Pendiente |
-| ST02-004 Capone"Gang"Bege | Character | [Blocker] | keyword `Blocker`, lista vacía | Pendiente |
-| ST02-005 Killer | Character | [On Play] K.O. up to 1 of your opponent's rested Characters with a cost of 3 or less. [Trigger] Play this card. | `ko`, `choose`, `playSelf` (nueva) | Pendiente |
-| ST02-006 Koby | Character | (sin texto) | vanilla | Pendiente |
-| ST02-007 Jewelry Bonney | Character | [Activate: Main] (1) You may rest this card: Look at 5 cards from the top of your deck; reveal up to 1 "Supernovas" type card and add it to your hand. Then, place the rest at the bottom of your deck in any order. | `search` con filtro por tipo `traits` (cambia), costo `restDon` y `restSelf`, `choose` `orderDeck` | Pendiente |
-| ST02-008 Scratchmen Apoo | Character | [DON!! x1] [When Attacking] Rest up to 1 of your opponent's DON!! cards. | `restDon` (nueva) | Pendiente |
-| ST02-009 Trafalgar Law | Character | [On Play] Set up to 1 of your "Supernovas" or "Heart Pirates" type rested Characters with a cost of 5 or less as active. | `activate`, `choose`, `traits` | Pendiente |
-| ST02-010 Basil Hawkins | Character | [DON!! x1] [Once Per Turn] [Your Turn] If this Character battles your opponent's Character, set this card as active. | timing `onBattle` (nuevo), `activate` | Pendiente |
-| ST02-011 Heat | Character | (sin texto) | vanilla | Pendiente |
-| ST02-012 Bepo | Character | (sin texto) | vanilla | Pendiente |
-| ST02-013 Eustass"Captain"Kid | Character | [Blocker] [DON!! x1] [End of Your Turn] Set this card as active. (errata oficial) | keyword `Blocker`, `activate` en `endOfYourTurn` | Pendiente |
-| ST02-014 X.Drake | Character | [DON!! x1] [Your Turn] If this Character is rested, your "Supernovas" or "Navy" type Leaders and Characters gain +1000 power. | `passivePower` con condición y alcance múltiple (nueva), `traits` | Pendiente |
-| ST02-015 Scalpel | Event | [Counter] Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, set up to 1 of your DON!! cards as active. [Trigger] Set up to 2 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Pendiente |
-| ST02-016 Repel | Event | [Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, set up to 1 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Pendiente |
-| ST02-017 Straw Sword | Event | [Main] Rest up to 1 of your opponent's Characters. | `rest`, `choose` | Pendiente |
+| ST02-001 Eustass"Captain"Kid | Leader | [Activate: Main] [Once Per Turn] (3) You may trash 1 card from your hand: Set this Leader as active. | `activate`, costo `restDon` y `trashFromHand` | Verificada |
+| ST02-002 Vito | Character | (sin texto) | vanilla | Verificada |
+| ST02-003 Urouge | Character | [DON!! x1] If you have 3 or more Characters, this card gains +2000 power. | `passivePower` con condición (nueva) | Verificada |
+| ST02-004 Capone"Gang"Bege | Character | [Blocker] | keyword `Blocker`, lista vacía | Verificada |
+| ST02-005 Killer | Character | [On Play] K.O. up to 1 of your opponent's rested Characters with a cost of 3 or less. [Trigger] Play this card. | `ko`, `choose`, `playSelf` (nueva) | Verificada |
+| ST02-006 Koby | Character | (sin texto) | vanilla | Verificada |
+| ST02-007 Jewelry Bonney | Character | [Activate: Main] (1) You may rest this card: Look at 5 cards from the top of your deck; reveal up to 1 "Supernovas" type card and add it to your hand. Then, place the rest at the bottom of your deck in any order. | `search` con filtro por tipo `traits` (cambia), costo `restDon` y `restSelf`, `choose` `orderDeck` | Verificada (simplificación: `search` deja las cartas no elegidas al fondo en su orden original; el texto dice "in any order") |
+| ST02-008 Scratchmen Apoo | Character | [DON!! x1] [When Attacking] Rest up to 1 of your opponent's DON!! cards. | `restDon` (nueva) | Verificada |
+| ST02-009 Trafalgar Law | Character | [On Play] Set up to 1 of your "Supernovas" or "Heart Pirates" type rested Characters with a cost of 5 or less as active. | `activate`, `choose`, `traits` | Verificada |
+| ST02-010 Basil Hawkins | Character | [DON!! x1] [Once Per Turn] [Your Turn] If this Character battles your opponent's Character, set this card as active. | timing `onBattle` (nuevo), `activate` | Verificada |
+| ST02-011 Heat | Character | (sin texto) | vanilla | Verificada |
+| ST02-012 Bepo | Character | (sin texto) | vanilla | Verificada |
+| ST02-013 Eustass"Captain"Kid | Character | [Blocker] [DON!! x1] [End of Your Turn] Set this card as active. (errata oficial) | keyword `Blocker`, `activate` en `endOfYourTurn` | Verificada |
+| ST02-014 X.Drake | Character | [DON!! x1] [Your Turn] If this Character is rested, your "Supernovas" or "Navy" type Leaders and Characters gain +1000 power. | `passivePower` con condición y alcance múltiple (nueva), `traits` | Verificada |
+| ST02-015 Scalpel | Event | [Counter] Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, set up to 1 of your DON!! cards as active. [Trigger] Set up to 2 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Verificada |
+| ST02-016 Repel | Event | [Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, set up to 1 of your DON!! cards as active. | `power`, `choose`, `activateDon` (nueva) | Verificada |
+| ST02-017 Straw Sword | Event | [Main] Rest up to 1 of your opponent's Characters. | `rest`, `choose` | Verificada |
 
 Hallazgos del paso 1 (lo que el DSL de SPEC 04 no cubre y el paso 2 debe agregar):
 
