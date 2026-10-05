@@ -1,6 +1,6 @@
 # SPEC 06 — UI Phaser (tablero, mano, drag-and-drop, zoom de carta)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 02
 > **Fecha:** 2026-10-02
 > **Objetivo:** Tener en el navegador un tablero de Phaser que muestra una partida del motor, resalta las jugadas legales y permite jugar con mouse (arrastrar, hacer clic, hacer zoom a las cartas), con ambos jugadores controlados por una persona.

@@ -1,6 +1,6 @@
 # SPEC 08 — IA simple (1 vs CPU)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 04, SPEC 06
 > **Fecha:** 2026-10-02
 > **Objetivo:** Tener una IA heurística en `src/ai/` que elige acciones de `getLegalActions` y juega una partida completa contra Nico, conectada al `GameController` de la UI.
