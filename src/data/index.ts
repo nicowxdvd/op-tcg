@@ -1,6 +1,7 @@
 import type { CardDef } from '../engine/types'
 import type { DeckConfig } from '../engine/state'
 import type { DeckFile, StoredCard } from './apiTypes'
+import { effectRegistry } from '../engine/effects/cards'
 import { cardFromApi } from './convert'
 import ST01 from './cards/ST01.json'
 import ST02 from './cards/ST02.json'
@@ -8,6 +9,8 @@ import st01 from './decks/st01.json'
 import st02 from './decks/st02.json'
 
 const DECKS: Record<string, DeckFile> = { st01, st02 }
+
+export { effectRegistry }
 
 
 export function loadCards(): StoredCard[] {

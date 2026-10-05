@@ -1,6 +1,7 @@
 import type { CardType, CharacterInPlay, EffectStep, GameEvent, GameState, PlayerId, PlayerState, QueuedEffect } from '../types'
-import { opponentOf } from '../state'
+import { MAX_CHARACTERS, opponentOf } from '../state'
 import { addModifier } from './modifiers'
+import { hasTrait } from './targets'
 import { queueEffects } from './timing'
 
 function drawCards(state: GameState, player: PlayerId, amount: number, events: GameEvent[]): GameState {
@@ -84,13 +85,13 @@ function setRested(state: GameState, target: string, rested: boolean, events: Ga
 }
 
 
-function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, pick: string | null | undefined, events: GameEvent[]): GameState {
+function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, trait: string | undefined, pick: string | null | undefined, events: GameEvent[]): GameState {
   const player = state.players[id]
   const top    = player.deck.slice(0, amount)
-  const found  = pick ? top.find(candidate => candidate.instanceId === pick && (!type || state.defs[candidate.defId].type === type)) : undefined
+  const found  = pick ? top.find(candidate => candidate.instanceId === pick && (!type || state.defs[candidate.defId].type === type) && (!trait || hasTrait(state.defs[candidate.defId], trait))) : undefined
 
   if (pick && !found)
-    throw new Error(`La carta ${pick} no está entre las ${amount} del tope o no cumple el tipo`)
+    throw new Error(`La carta ${pick} no está entre las ${amount} del tope o no cumple el filtro`)
 
   const rest   = top.filter(candidate => candidate !== found)
 
@@ -149,6 +150,78 @@ function toHand(state: GameState, id: PlayerId, instanceId: string, events: Game
 }
 
 
+function attachDon(state: GameState, id: PlayerId, target: string, amount: number, events: GameEvent[]): GameState {
+  const player   = state.players[id]
+  const isLeader = player.leader.instanceId === target
+  const attached = player.characters.find(candidate => candidate.card.instanceId === target)
+
+  if (!isLeader && !attached)
+    throw new Error(`La carta ${target} no está en el área de ${id}`)
+
+  const moved = Math.min(amount, player.donRested)
+  const base  = { ...player, donRested: player.donRested - moved }
+
+  for (let i = 0; i < moved; i++)
+    events.push({ type: 'DonAttached', player: id, target })
+
+  return setPlayer(state, id, isLeader ? { ...base, leaderAttachedDon: player.leaderAttachedDon + moved } : { ...base, characters: player.characters.map(candidate => candidate === attached ? { ...candidate, attachedDon: candidate.attachedDon + moved } : candidate) })
+
+}
+
+
+function restDon(state: GameState, id: PlayerId, amount: number, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = Math.min(amount, player.donActive)
+
+  if (!moved)
+    return state
+
+  events.push({ type: 'DonRested', player: id, amount: moved })
+
+  return setPlayer(state, id, { ...player, donActive: player.donActive - moved, donRested: player.donRested + moved })
+
+}
+
+
+function activateDon(state: GameState, id: PlayerId, amount: number, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = Math.min(amount, player.donRested)
+
+  if (!moved)
+    return state
+
+  events.push({ type: 'DonActivated', player: id, amount: moved })
+
+  return setPlayer(state, id, { ...player, donRested: player.donRested - moved, donActive: player.donActive + moved })
+
+}
+
+
+function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: string | undefined, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const card   = player.trash.find(candidate => candidate.instanceId === instanceId)
+
+  if (!card || state.defs[card.defId].type !== 'Character')
+    return state
+
+  const replaced = player.characters.find(candidate => candidate.card.instanceId === replace)
+
+  if (player.characters.length >= MAX_CHARACTERS && !replaced)
+    throw new Error(`Con ${MAX_CHARACTERS} Characters hay que elegir uno para reemplazar`)
+
+  if (replaced)
+    events.push({ type: 'CharacterTrashed', player: id, instanceId: replaced.card.instanceId })
+
+  events.push({ type: 'CharacterPlayed', player: id, instanceId })
+
+  const trash = [...player.trash.filter(candidate => candidate !== card), ...(replaced ? [replaced.card] : [])]
+  const next  = setPlayer(state, id, { ...player, trash, characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
+
+  return queueEffects(next, 'onPlay', { instanceId, defId: card.defId, owner: id, attachedDon: 0 }, events)
+
+}
+
+
 export function executeStep(state: GameState, step: EffectStep, queued: QueuedEffect, events: GameEvent[]): GameState {
   switch (step.op) {
     case 'draw':
@@ -164,13 +237,23 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
     case 'activate':
       return setRested(state, step.target, false, events)
     case 'search':
-      return search(state, step.player, step.amount, step.type, step.pick, events)
+      return search(state, step.player, step.amount, step.type, step.trait, step.pick, events)
     case 'toLife':
       return toLife(state, step.player, step.instanceId, events)
     case 'discard':
       return discard(state, step.player, step.instanceId, events)
     case 'toHand':
       return toHand(state, step.player, step.instanceId, events)
+    case 'attachDon':
+      return attachDon(state, step.player, step.target, step.amount, events)
+    case 'restDon':
+      return restDon(state, step.player, step.amount, events)
+    case 'activateDon':
+      return activateDon(state, step.player, step.amount, events)
+    case 'blockerLock':
+      return { ...state, restrictions: [...state.restrictions, { attacker: step.attacker, minPower: step.minPower, duration: step.duration, sourceId: queued.source }] }
+    case 'playSelf':
+      return playSelf(state, step.player, step.instanceId, step.replace, events)
     default:
       throw new Error(`Primitiva no implementada: ${step.op}`)
   }

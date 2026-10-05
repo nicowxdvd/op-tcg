@@ -1,8 +1,11 @@
 import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId } from './types'
 import { opponentOf, requireMain } from './state'
-import { getPower } from './queries'
+import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
-import { fireEffects } from './effects'
+import { fireEffects, resolveQueue } from './effects'
+import { hasKeyword } from './effects/passive'
+import { findFieldCard } from './effects/targets'
+import { queueEffects } from './effects/timing'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
 type DeclareBlockAction = Extract<Action, { type: 'DeclareBlock' }>
@@ -41,7 +44,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn && !state.defs[character.card.defId].keywords.includes('Rush'))
+  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush'))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)
@@ -54,7 +57,10 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
   const events: GameEvent[] = [{ type: 'AttackDeclared', player: action.player, attacker: action.attacker, target: action.target }]
   const source              = fromLeader ? { instanceId: player.leader.instanceId, defId: player.leader.defId, owner: action.player, attachedDon: player.leaderAttachedDon } : { instanceId: character!.card.instanceId, defId: character!.card.defId, owner: action.player, attachedDon: character!.attachedDon }
 
-  return { state: fireEffects({ ...state, players: { ...state.players, [action.player]: rested }, battle }, 'whenAttacking', source, events), events }
+  const started = { ...state, players: { ...state.players, [action.player]: rested }, battle }
+  const queued  = queueEffects(started, 'whenAttacking', source, events)
+
+  return { state: resolveQueue(action.target === 'leader' ? queued : queueEffects(queued, 'onBattle', source, events), events), events }
 
 }
 
@@ -66,14 +72,20 @@ export function declareBlock(state: GameState, action: DeclareBlockAction): Appl
 
   if (!blocker)
     throw new Error(`El Character ${action.blockerId} no está en juego`)
-  if (!state.defs[blocker.card.defId].keywords.includes('Blocker'))
+  if (!hasKeyword(state, blocker.card.instanceId, 'Blocker'))
     throw new Error(`El Character ${action.blockerId} no tiene Blocker`)
+  if (isBlockLocked(state, blocker.card.instanceId))
+    throw new Error(`El Character ${action.blockerId} no puede bloquear en esta batalla`)
   if (blocker.rested)
     throw new Error(`El Character ${action.blockerId} está descansado y no puede bloquear`)
 
   const rested = { ...player, characters: player.characters.map(candidate => candidate === blocker ? { ...candidate, rested: true } : candidate) }
 
-  return { state: { ...state, players: { ...state.players, [action.player]: rested }, battle: { ...battle, target: action.blockerId, step: 'counter' } }, events: [{ type: 'BlockDeclared', player: action.player, blockerId: action.blockerId }] }
+  const events: GameEvent[] = [{ type: 'BlockDeclared', player: action.player, blockerId: action.blockerId }]
+  const blocked             = { ...state, players: { ...state.players, [action.player]: rested }, battle: { ...battle, target: action.blockerId, step: 'counter' as const } }
+  const attacker            = findFieldCard(blocked, battle.attacker === 'leader' ? state.players[battle.attackerPlayer].leader.instanceId : battle.attacker)
+
+  return { state: attacker ? fireEffects(blocked, 'onBattle', { instanceId: attacker.instanceId, defId: attacker.defId, owner: attacker.owner, attachedDon: attacker.attachedDon }, events) : blocked, events }
 
 }
 
@@ -169,14 +181,6 @@ function dealLifeDamage(state: GameState, battle: BattleState, hits: number, ban
 }
 
 
-function attackerDefId(state: GameState, battle: BattleState): string {
-  const player = state.players[battle.attackerPlayer]
-
-  return battle.attacker === 'leader' ? player.leader.defId : player.characters.find(candidate => candidate.card.instanceId === battle.attacker)!.card.defId
-
-}
-
-
 function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
   const defender   = opponentOf(battle.attackerPlayer)
   const rival      = state.players[defender]
@@ -208,9 +212,7 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
   }
 
-  const keywords = state.defs[attackerDefId(state, battle)].keywords
-
-  return dealLifeDamage(state, battle, keywords.includes('DoubleAttack') ? 2 : 1, keywords.includes('Banish'), events)
+  return dealLifeDamage(state, battle, hasKeyword(state, attackerId, 'DoubleAttack') ? 2 : 1, hasKeyword(state, attackerId, 'Banish'), events)
 
 }
 
