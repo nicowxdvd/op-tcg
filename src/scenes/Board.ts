@@ -69,7 +69,11 @@ export class Board extends Phaser.Scene {
 
     const unsubscribe = this.controller.on(() => { this.dirty = true })
 
-    this.events.once('shutdown', unsubscribe)
+    this.events.once('shutdown', () => {
+      unsubscribe()
+      this.controller.dispose()
+
+    })
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.GameObject) => this.onDragEnd(pointer, object))
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -100,7 +104,9 @@ export class Board extends Phaser.Scene {
     this.dialog = null
     this.sources.clear()
 
-    this.viewer = this.controller.actor()
+    const actor = this.controller.actor()
+
+    this.viewer = this.controller.isCpu(actor) ? opponentOf(actor) : actor
     this.legal  = this.controller.getLegal(this.viewer)
     this.layer  = this.add.container(0, 0)
 
