@@ -2,6 +2,7 @@ import type { Action, ApplyResult, BattleState, GameEvent, GameState, PlayerId }
 import { opponentOf, requireMain } from './state'
 import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
+import { hasKeyword } from './effects/passive'
 import { fireEffects } from './effects'
 
 type AttackAction       = Extract<Action, { type: 'Attack' }>
@@ -41,7 +42,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn && !state.defs[character.card.defId].keywords.includes('Rush'))
+  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush'))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)
@@ -66,7 +67,7 @@ export function declareBlock(state: GameState, action: DeclareBlockAction): Appl
 
   if (!blocker)
     throw new Error(`El Character ${action.blockerId} no está en juego`)
-  if (!state.defs[blocker.card.defId].keywords.includes('Blocker'))
+  if (!hasKeyword(state, blocker.card.instanceId, 'Blocker'))
     throw new Error(`El Character ${action.blockerId} no tiene Blocker`)
   if (isBlockLocked(state, blocker.card.instanceId))
     throw new Error(`El Character ${action.blockerId} no puede bloquear en esta batalla`)
@@ -171,14 +172,6 @@ function dealLifeDamage(state: GameState, battle: BattleState, hits: number, ban
 }
 
 
-function attackerDefId(state: GameState, battle: BattleState): string {
-  const player = state.players[battle.attackerPlayer]
-
-  return battle.attacker === 'leader' ? player.leader.defId : player.characters.find(candidate => candidate.card.instanceId === battle.attacker)!.card.defId
-
-}
-
-
 function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[]): GameState {
   const defender   = opponentOf(battle.attackerPlayer)
   const rival      = state.players[defender]
@@ -210,9 +203,7 @@ function resolveDamage(state: GameState, battle: BattleState, events: GameEvent[
 
   }
 
-  const keywords = state.defs[attackerDefId(state, battle)].keywords
-
-  return dealLifeDamage(state, battle, keywords.includes('DoubleAttack') ? 2 : 1, keywords.includes('Banish'), events)
+  return dealLifeDamage(state, battle, hasKeyword(state, attackerId, 'DoubleAttack') ? 2 : 1, hasKeyword(state, attackerId, 'Banish'), events)
 
 }
 

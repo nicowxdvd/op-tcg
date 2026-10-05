@@ -20,7 +20,7 @@ export interface CardDef {
 
 }
 
-export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main'
+export type Timing = 'onPlay' | 'whenAttacking' | 'onKO' | 'activateMain' | 'endOfYourTurn' | 'trigger' | 'counter' | 'main' | 'passive'
 
 export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
 
@@ -57,12 +57,20 @@ export interface EffectCost {
 
 }
 
+export interface Aura {
+  power?: number
+  keyword?: Keyword
+  affects?: (ctx: EffectContext, candidate: string) => boolean
+
+}
+
 export interface EffectDef {
   timing: Timing
   donRequired?: number
   turn?: 'yours' | 'opponents'
   oncePerTurn?: boolean
   cost?: EffectCost
+  aura?: Aura
   condition?: (ctx: EffectContext) => boolean
   run: (ctx: EffectContext) => EffectStep[]
 

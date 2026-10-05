@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
 import { resolveQueue } from '../../src/engine/effects'
+import { hasKeyword, passivePower } from '../../src/engine/effects/passive'
 import { hasTrait } from '../../src/engine/effects/targets'
-import { getLegalActions } from '../../src/engine/queries'
+import { getLegalActions, getPower } from '../../src/engine/queries'
 import { BLOCKER_ID, defs } from './fixtures'
 import { card, inPlay, startGame, withPlayer } from './helpers'
-import type { CardDef, EffectStep, EffectRegistry, GameEvent, GameState } from '../../src/engine/types'
+import type { CardDef, EffectDef, EffectRegistry, EffectStep, GameEvent, GameState } from '../../src/engine/types'
 
 const TRAIT_ID = 'T-TR1'
 const traitDef: CardDef = { id: TRAIT_ID, name: 'Con tipos', type: 'Character', cost: 2, power: 3000, counter: 1000, life: 0, colors: ['Red'], keywords: [], traits: 'Straw Hat Crew Supernovas' }
@@ -23,6 +24,12 @@ function run(state: GameState, ...steps: EffectStep[]): { state: GameState; even
   const events: GameEvent[] = []
 
   return { state: resolveQueue({ ...state, effectQueue: [{ source: 'p1-t1', owner: 'p1', steps }] }, events), events }
+
+}
+
+
+function passive(patch: Partial<EffectDef>): EffectDef {
+  return { timing: 'passive', run: () => [], ...patch }
 
 }
 
@@ -256,6 +263,80 @@ describe('primitiva playSelf', () => {
     const result = run(state, { op: 'playSelf', player: 'p1', instanceId: 'p1-t50' })
 
     expect(result.state.players.p1.characters).toHaveLength(1)
+
+  })
+
+})
+
+
+
+describe('efectos pasivos', () => {
+
+  it('un aura de power solo cuenta con los DON!! requeridos', () => {
+    const effects = { 'T-C04': [passive({ donRequired: 1, aura: { power: 1000 } })] }
+    const without = stage(effects)
+    const withDon = withPlayer(without, 'p1', { characters: [inPlay(card('p1', 'T-C04', 1), 1, 1)] })
+
+    expect(passivePower(without, 'p1-t1')).toBe(0)
+    expect(passivePower(withDon, 'p1-t1')).toBe(1000)
+    expect(getPower(withDon, 'p1-t1')).toBe(defs['T-C04'].power + 1000 + 1000)
+
+  })
+
+
+  it('respeta turn y condition', () => {
+    const effects = { 'T-C04': [passive({ turn: 'opponents', aura: { power: 2000 } }), passive({ condition: ctx => ctx.state.players[ctx.owner].characters.length >= 2, aura: { power: 500 } })] }
+    const state   = stage(effects)
+
+    expect(passivePower(state, 'p1-t1')).toBe(0)
+    expect(passivePower({ ...state, active: 'p2' }, 'p1-t1')).toBe(2000)
+    expect(passivePower(withPlayer(state, 'p1', { characters: [inPlay(card('p1', 'T-C04', 1)), inPlay(card('p1', 'T-C03', 7))] }), 'p1-t1')).toBe(500)
+
+  })
+
+
+  it('affects permite un aura que beneficia a otras cartas del dueño', () => {
+    const effects = { 'T-C04': [passive({ aura: { power: 1000, affects: (ctx, candidate) => candidate !== ctx.source && candidate.startsWith(ctx.owner) } })] }
+    const state   = withPlayer(stage(effects), 'p1', { characters: [inPlay(card('p1', 'T-C04', 1)), inPlay(card('p1', 'T-C03', 7))] })
+
+    expect(passivePower(state, 'p1-t1')).toBe(0)
+    expect(passivePower(state, 'p1-t7')).toBe(1000)
+    expect(passivePower(state, state.players.p1.leader.instanceId)).toBe(1000)
+    expect(passivePower(state, 'p2-t2')).toBe(0)
+
+  })
+
+
+  it('un aura de keyword otorga Rush y habilita atacar el turno en que entra', () => {
+    const effects = { 'T-C04': [passive({ donRequired: 1, aura: { keyword: 'Rush' } })] }
+    const base    = withPlayer(stage(effects), 'p1', { characters: [inPlay(card('p1', 'T-C04', 1), 3, 0)] })
+    const granted = withPlayer(base, 'p1', { characters: [inPlay(card('p1', 'T-C04', 1), 3, 1)] })
+
+    expect(hasKeyword(base, 'p1-t1', 'Rush')).toBe(false)
+    expect(hasKeyword(granted, 'p1-t1', 'Rush')).toBe(true)
+    expect(getLegalActions(base, 'p1').some(action => action.type === 'Attack' && action.attacker === 'p1-t1')).toBe(false)
+    expect(getLegalActions(granted, 'p1').some(action => action.type === 'Attack' && action.attacker === 'p1-t1')).toBe(true)
+    expect(() => apply(granted, { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: 'leader' })).not.toThrow()
+
+  })
+
+
+  it('un aura de Blocker permite bloquear', () => {
+    const effects = { 'T-C02': [passive({ aura: { keyword: 'Blocker' } })] }
+    const state   = withPlayer(stage(effects), 'p2', { characters: [inPlay(card('p2', 'T-C02', 2))] })
+    const battle  = apply(state, { type: 'Attack', player: 'p1', attacker: 'p1-t1', target: 'leader' }).state
+
+    expect(getLegalActions(battle, 'p2')).toContainEqual({ type: 'DeclareBlock', player: 'p2', blockerId: 'p2-t2' })
+
+  })
+
+
+  it('las cartas sin pasivos no cambian su power ni sus keywords', () => {
+    const state = stage()
+
+    expect(getPower(state, 'p1-t1')).toBe(defs['T-C04'].power)
+    expect(hasKeyword(state, 'p2-t3', 'Blocker')).toBe(true)
+    expect(hasKeyword(state, 'p1-t1', 'Rush')).toBe(false)
 
   })
 
