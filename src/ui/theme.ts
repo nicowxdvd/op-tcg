@@ -37,7 +37,7 @@ export const FONT     = { family: '"Montserrat", "Poppins", "Segoe UI", "Helveti
 export const RADIUS   = { card: 6, zone: 8, panel: 14, pill: 10, button: 8 } as const
 export const SPACING  = { xs: 4, sm: 8, md: 12, lg: 20 } as const
 export const SHADOW   = { offset: 3, alpha: 0.45, glow: 0.35 } as const
-export const DURATION = { turn: 200, quick: 150, move: 250 } as const
+export const DURATION = { turn: 200, quick: 150, move: 250, hover: 70 } as const
 export const MIN_SIZE = { w: 1024, h: 600 } as const
 export const MAX_DPR  = 2
 

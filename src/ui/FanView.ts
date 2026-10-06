@@ -30,12 +30,20 @@ export class FanView extends Phaser.GameObjects.Container {
 
 
   private lift(sprite: CardSprite, slot: { x: number; y: number; angle: number }, card: Size): void {
+    const index = this.sprites.indexOf(sprite)
+
     sprite.on('pointerover', () => {
       this.bringToTop(sprite)
-      this.scene.tweens.add({ targets: sprite, y: slot.y - card.h * 0.3, scale: 1.3, angle: 0, duration: DURATION.quick })
+      this.scene.tweens.killTweensOf(sprite)
+      this.scene.tweens.add({ targets: sprite, y: slot.y - card.h * 0.15, scale: 1.3, angle: 0, duration: DURATION.hover })
 
     })
-    sprite.on('pointerout', () => this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.quick }))
+    sprite.on('pointerout', () => {
+      this.moveTo(sprite, index)
+      this.scene.tweens.killTweensOf(sprite)
+      this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.hover })
+
+    })
 
   }
 
