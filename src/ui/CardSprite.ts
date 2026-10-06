@@ -24,6 +24,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
   readonly cardSize: Size
   hitWidth: number | undefined
   private marker: Phaser.GameObjects.Graphics
+  private focus: Phaser.GameObjects.Graphics
 
   constructor(scene: Phaser.Scene, x: number, y: number, size: Size, view: CardView) {
     super(scene, x, y)
@@ -61,6 +62,9 @@ export class CardSprite extends Phaser.GameObjects.Container {
     this.marker = scene.add.graphics().setVisible(false)
     this.add(this.marker)
 
+    this.focus = scene.add.graphics().setVisible(false)
+    this.add(this.focus)
+
     if (view.rested)
       this.setAngle(90)
 
@@ -74,6 +78,22 @@ export class CardSprite extends Phaser.GameObjects.Container {
       const { w, h } = this.cardSize
 
       this.marker.lineStyle(4, color, 1).strokeRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, RADIUS.card + 2)
+
+    }
+
+    return this
+
+  }
+
+
+  setFocus(on: boolean): this {
+    this.focus.clear().setVisible(on)
+
+    if (on) {
+      const { w, h } = this.cardSize
+
+      this.focus.lineStyle(10, COLORS.neon, 0.18).strokeRoundedRect(-w / 2 - 5, -h / 2 - 5, w + 10, h + 10, RADIUS.card + 4)
+      this.focus.lineStyle(4, COLORS.neon, 1).strokeRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, RADIUS.card + 2)
 
     }
 
