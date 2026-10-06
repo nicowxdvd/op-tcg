@@ -16,6 +16,7 @@ import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { preloadCardImages } from '../ui/textures'
+import { pixelRatio } from '../ui/viewport'
 import { Zone } from '../ui/Zone'
 
 type DragSource =
@@ -43,6 +44,7 @@ export class Board extends Phaser.Scene {
   private legal: Action[] = []
   private sources = new Map<Phaser.GameObjects.GameObject, DragSource>()
   private images: string[] = []
+  private ratio = 1
 
   constructor() {
     super('Board')
@@ -64,7 +66,8 @@ export class Board extends Phaser.Scene {
 
 
   create() {
-    this.layout = computeLayout(this.scale.width, this.scale.height)
+    this.ratio = pixelRatio(window.devicePixelRatio)
+    this.fitCamera()
     this.input.mouse?.disableContextMenu()
 
     const unsubscribe = this.controller.on(() => { this.dirty = true })
@@ -74,6 +77,8 @@ export class Board extends Phaser.Scene {
       this.controller.dispose()
 
     })
+    this.scale.on('resize', () => this.fitCamera())
+    this.events.once('shutdown', () => this.scale.off('resize'))
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.GameObject) => this.onDragEnd(pointer, object))
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -81,6 +86,14 @@ export class Board extends Phaser.Scene {
         this.zoom.hide()
 
     })
+
+  }
+
+
+  private fitCamera() {
+    this.cameras.main.setOrigin(0, 0).setZoom(this.ratio)
+    this.layout = computeLayout(this.scale.width / this.ratio, this.scale.height / this.ratio)
+    this.dirty  = true
 
   }
 
@@ -133,7 +146,7 @@ export class Board extends Phaser.Scene {
     const state = this.controller.getState()
     const rect  = this.layout.status
     const line  = state.winner ? `Game over: ${state.winner.toUpperCase()} wins` : state.phase === 'mulligan' ? `Mulligan (${this.viewer.toUpperCase()})` : `Turn ${state.turn} - ${state.active.toUpperCase()} - ${state.phase}  (viewing ${this.viewer.toUpperCase()})`
-    const text  = this.add.text(rect.x, rect.y + rect.h / 2, this.notice ?? line, { fontSize: `${Math.round(rect.h * 0.45)}px`, color: this.notice ? '#ff8a80' : '#ffffff' }).setOrigin(0, 0.5)
+    const text  = this.add.text(rect.x, rect.y + rect.h / 2, this.notice ?? line, { fontSize: `${Math.round(rect.h * 0.25)}px`, color: this.notice ? '#ff8a80' : '#ffffff', wordWrap: { width: rect.w } }).setOrigin(0, 0.5)
 
     this.layer.add(text)
 
@@ -296,7 +309,7 @@ export class Board extends Phaser.Scene {
     if (!source)
       return
 
-    const actions = this.actionsAt(source, pointer.x, pointer.y)
+    const actions = this.actionsAt(source, pointer.worldX, pointer.worldY)
 
     if (actions.length === 1)
       this.send(actions[0])
