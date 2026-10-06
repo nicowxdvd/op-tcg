@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allRects, computeLayout, contains, donSlots, fanSlots, overlaps } from '../../src/ui/layout'
+import { allRects, computeLayout, contains, donSlots, fanSlots, overlaps, splitLearn } from '../../src/ui/layout'
 
 const SIZES = [[1024, 600], [1280, 720], [1920, 1080], [2560, 1440], [2560, 1080]] as const
 
@@ -121,6 +121,30 @@ describe('layout', () => {
         expect(slot.x - handCard.w / 2).toBeGreaterThanOrEqual(rival.hand.x - 0.001)
         expect(slot.x + handCard.w / 2).toBeLessThanOrEqual(rival.hand.x + rival.hand.w + 0.001)
       }
+    }
+
+  })
+
+
+
+  it.each(SIZES)('el panel de aprendizaje y el log caben dentro del log a %ix%i', (width, height) => {
+    const { log } = computeLayout(width, height)
+
+    for (const expanded of [true, false]) {
+      const parts = splitLearn(log, expanded)
+      const rects = [parts.toggle, ...(parts.learn ? [parts.learn] : []), parts.log]
+
+      expect(Boolean(parts.learn)).toBe(expanded)
+
+      for (const rect of rects) {
+        expect(rect.h).toBeGreaterThan(0)
+        expect(rect.y).toBeGreaterThanOrEqual(log.y)
+        expect(rect.y + rect.h).toBeLessThanOrEqual(log.y + log.h + 0.001)
+      }
+
+      for (let i = 0; i < rects.length; i++)
+        for (let j = i + 1; j < rects.length; j++)
+          expect(overlaps(rects[i], rects[j])).toBe(false)
     }
 
   })

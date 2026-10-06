@@ -53,6 +53,13 @@ export interface BoardLayout {
 
 }
 
+export interface LearnLayout {
+  toggle: Rect
+  learn: Rect | null
+  log: Rect
+
+}
+
 export const CARD_RATIO      = 0.72
 export const CHARACTER_SLOTS = 5
 export const MAX_ASPECT      = 2
@@ -135,6 +142,21 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const zoom        = { x: sideX, y: logY, w: sideW, h: Math.min(log.h, sideW * 0.5) }
 
   return { width, height, content: { x: cx, y: 0, w: cw, h: height }, card, handCard, self, rival, fullscreen, status, banner, log, zoom, button, report }
+
+}
+
+
+export function splitLearn(log: Rect, expanded: boolean): LearnLayout {
+  const gap    = Math.min(6, log.h * 0.02)
+  const toggle = { x: log.x, y: log.y, w: log.w, h: Math.max(18, log.h * 0.09) }
+  const below  = { x: log.x, y: toggle.y + toggle.h + gap, w: log.w, h: log.h - toggle.h - gap }
+
+  if (!expanded)
+    return { toggle, learn: null, log: below }
+
+  const learn = { ...below, h: below.h * 0.58 }
+
+  return { toggle, learn, log: { x: log.x, y: learn.y + learn.h + gap, w: log.w, h: below.h - learn.h - gap } }
 
 }
 
