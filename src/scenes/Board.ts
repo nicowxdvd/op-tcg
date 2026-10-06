@@ -18,6 +18,8 @@ import { center, computeLayout, contains, splitLearn } from '../ui/layout'
 import type { BoardLayout, LearnLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
 import { FanView } from '../ui/FanView'
+import { nextHandSort, sortHand } from '../ui/handSort'
+import type { HandSort } from '../ui/handSort'
 import { instructionFor, phaseLabel } from '../ui/instructions'
 import { PlayerBadge } from '../ui/PlayerBadge'
 import { PlayerPanel } from '../ui/PlayerPanel'
@@ -69,6 +71,7 @@ export class Board extends Phaser.Scene {
   private lastActive: PlayerId | null = null
   private log = new GameLog()
   private learnOpen = true
+  private handSort: HandSort = 'original'
   private config: MatchConfig = MOCK_CONFIG
   private ending = false
   private logArea: LearnLayout | null = null
@@ -376,7 +379,7 @@ export class Board extends Phaser.Scene {
       return
     }
 
-    const hand = new FanView(this, side.hand, views, this.layout.handCard, 'self')
+    const hand = new FanView(this, side.hand, sortHand(views, this.handSort), this.layout.handCard, 'self', this.handSort, () => this.cycleHandSort())
 
     this.layer.add(hand)
 
@@ -392,6 +395,13 @@ export class Board extends Phaser.Scene {
         sprite.enableInput()
       }
     }
+
+  }
+
+
+  private cycleHandSort() {
+    this.handSort = nextHandSort(this.handSort)
+    this.dirty    = true
 
   }
 
