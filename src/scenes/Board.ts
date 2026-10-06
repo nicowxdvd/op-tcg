@@ -1,6 +1,9 @@
 import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
+import { createController } from '../app/createController'
+import type { MatchConfig } from '../app/gameConfig'
+import { loadPreferences, savePreferences } from '../app/preferences'
 import { createMockController } from '../dev/mockGame'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
@@ -67,12 +70,12 @@ export class Board extends Phaser.Scene {
   }
 
 
-  init(data: { controller?: GameController; images?: string[]; donImage?: string | null }) {
-    this.controller = data.controller ?? createMockController()
+  init(data: { config?: MatchConfig; controller?: GameController; images?: string[]; donImage?: string | null }) {
+    this.controller = data.controller ?? (data.config ? createController(data.config) : createMockController())
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
     this.log        = new GameLog()
-    this.learnOpen  = true
+    this.learnOpen  = loadPreferences().learnPanel
 
     const state = this.controller.getState()
 
@@ -222,6 +225,7 @@ export class Board extends Phaser.Scene {
 
   private toggleLearn() {
     this.learnOpen = !this.learnOpen
+    savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
 
   }

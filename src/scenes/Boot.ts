@@ -14,7 +14,7 @@ export class Boot extends Phaser.Scene {
     const images   = await findCardImages(Object.keys(loadDefs()))
     const donImage = await findDonImage()
 
-    this.scene.start('Menu', { images, donImage })
+    this.scene.start(import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock') ? 'Board' : 'Menu', { images, donImage })
 
   }
 

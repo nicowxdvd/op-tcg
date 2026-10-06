@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser'
-import { createController } from '../app/createController'
 import { matchError } from '../app/gameConfig'
 import type { MatchConfig } from '../app/gameConfig'
 import { listDecks, loadDefs } from '../data'
@@ -160,7 +159,7 @@ export class DeckSelect extends Phaser.Scene {
       return
     }
 
-    this.scene.start('Board', { controller: createController(config), images: this.images, donImage: this.donImage })
+    this.scene.start('Board', { config, images: this.images, donImage: this.donImage })
 
   }
 
