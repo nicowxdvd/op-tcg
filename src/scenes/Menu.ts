@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser'
+import { audio } from '../ui/AudioManager'
 import { Button } from '../ui/Button'
 import { COLORS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
@@ -56,6 +57,28 @@ export class Menu extends Phaser.Scene {
     this.add.text(cx, top - 60 * unit, 'Elegí cómo querés jugar', textStyle(18 * unit, COLORS.textDim, false)).setOrigin(0.5)
     this.add.existing(new Button(this, cx, top + buttonH / 2, buttonW, buttonH, 'Jugar contra CPU', () => this.start(true), { primary: true, fontSize: 20 * unit }))
     this.add.existing(new Button(this, cx, top + buttonH * 1.5 + gap, buttonW, buttonH, 'Jugar entre dos personas', () => this.start(false), { fontSize: 20 * unit }))
+
+    const rowY  = top + buttonH * 2 + gap + 70 * unit
+    const small = 44 * unit
+
+    this.add.existing(new Button(this, cx - buttonW / 2 + small / 2, rowY, small, small, '−', () => this.volume(-0.1), { fontSize: 22 * unit }))
+    this.add.text(cx, rowY, `Volumen ${Math.round(audio.getVolume() * 100)}%`, textStyle(18 * unit, COLORS.text)).setOrigin(0.5)
+    this.add.existing(new Button(this, cx + buttonW / 2 - small / 2, rowY, small, small, '+', () => this.volume(0.1), { fontSize: 22 * unit }))
+    this.add.existing(new Button(this, cx, rowY + small + 12 * unit, buttonW, small, audio.isMuted() ? 'Sonido: silenciado (M)' : 'Sonido: activado (M)', () => this.mute(), { fontSize: 16 * unit }))
+
+  }
+
+
+  private volume(delta: number) {
+    audio.setVolume(audio.getVolume() + delta)
+    this.build()
+
+  }
+
+
+  private mute() {
+    audio.toggleMute()
+    this.build()
 
   }
 

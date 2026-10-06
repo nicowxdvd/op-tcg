@@ -4,8 +4,10 @@ import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../
 import { createController } from '../app/createController'
 import type { MatchConfig } from '../app/gameConfig'
 import { gameResult } from '../app/gameResult'
+import { soundsFor } from '../app/sounds'
 import { loadPreferences, savePreferences } from '../app/preferences'
 import { createMockController } from '../dev/mockGame'
+import { audio } from '../ui/AudioManager'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
 import { CardZoom } from '../ui/CardZoom'
@@ -108,6 +110,9 @@ export class Board extends Phaser.Scene {
 
     const unsubscribe = this.controller.on(events => {
       this.queued.push(...events)
+
+      for (const name of soundsFor(events))
+        audio.play(name)
 
       for (const event of events)
         this.log.add(describeEvent(event, this.controller.getState()))
