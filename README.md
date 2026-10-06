@@ -15,9 +15,9 @@ Un simulador web del **One Piece Card Game** para aprender a jugar. La idea: sen
 | Datos de cartas | `05-datos` | Zarpó (implementado) |
 | UI con Phaser | `06-ui-phaser` | Zarpó (implementado) |
 | Mejora de UI/UX | `11-mejora-ui-ux` | Zarpó (implementado) |
-| Modo aprendizaje | `07-modo-aprendizaje` | En el mapa |
+| Modo aprendizaje | `07-modo-aprendizaje` | Zarpó (implementado) |
 | IA simple | `08-ia-simple` | Zarpó (implementado) |
-| Pulido | `09-pulido` | En el mapa |
+| Pulido | `09-pulido` | Zarpó (implementado) |
 | Efectos ST-01 / ST-02 | `10-efectos-cartas-st01-st02` | Zarpó (implementado) |
 
 El motor ya resuelve una partida completa: creación de partida, mulligan, Life, fases del turno, DON!!, jugar Characters, Events y Stages, adjuntar DON!!, la batalla (ataque, Blocker, Counter, daño, K.O. y victoria por Life) y un sistema de efectos por datos con los keywords Rush, Double Attack y Banish, los triggers `[On Play]`, `[When Attacking]`, `[On K.O.]`, `[Activate: Main]`, `[End of Your Turn]`, `[Counter]` y `[Trigger]`, y decisiones del jugador. Las cartas de ST-01 y ST-02 ya se cargan desde JSON local, con dos mazos de práctica de 50 cartas, y sus 34 cartas distintas tienen los efectos codificados. El tablero en Phaser ya permite jugar contra una CPU (IA simple). El resto del tesoro está por descubrir.

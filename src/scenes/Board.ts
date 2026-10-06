@@ -1,27 +1,37 @@
 import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
+import { createController } from '../app/createController'
+import type { MatchConfig } from '../app/gameConfig'
+import { gameResult } from '../app/gameResult'
+import { soundsFor } from '../app/sounds'
+import { loadPreferences, savePreferences } from '../app/preferences'
 import { createMockController } from '../dev/mockGame'
+import { audio } from '../ui/AudioManager'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
 import { CardZoom } from '../ui/CardZoom'
 import { cardText } from '../ui/cardText'
 import { DonArea } from '../ui/DonArea'
 import { GameController } from '../ui/GameController'
-import { center, computeLayout, contains } from '../ui/layout'
-import type { BoardLayout, SideLayout } from '../ui/layout'
+import { center, computeLayout, contains, splitLearn } from '../ui/layout'
+import type { BoardLayout, LearnLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
 import { FanView } from '../ui/FanView'
 import { instructionFor, phaseLabel } from '../ui/instructions'
 import { PlayerBadge } from '../ui/PlayerBadge'
 import { PlayerPanel } from '../ui/PlayerPanel'
-import { MOCK_COUNTER_CLOCK, MOCK_LOG, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
+import { MOCK_COUNTER_CLOCK, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
+import { GameLog } from '../ui/GameLog'
+import { describeEvent } from '../learn/describeEvent'
+import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 import { COLORS, RADIUS, textStyle } from '../ui/theme'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
@@ -35,6 +45,9 @@ const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
 const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
+const RESULT_MS = 1800
+
+const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0 }
 
 
 export class Board extends Phaser.Scene {
@@ -54,6 +67,11 @@ export class Board extends Phaser.Scene {
   private ratio = 1
   private queued: GameEvent[] = []
   private lastActive: PlayerId | null = null
+  private log = new GameLog()
+  private learnOpen = true
+  private config: MatchConfig = MOCK_CONFIG
+  private ending = false
+  private logArea: LearnLayout | null = null
 
   constructor() {
     super('Board')
@@ -61,10 +79,18 @@ export class Board extends Phaser.Scene {
   }
 
 
-  init(data: { controller?: GameController; images?: string[]; donImage?: string | null }) {
-    this.controller = data.controller ?? createMockController()
+  init(data: { config?: MatchConfig; controller?: GameController; images?: string[]; donImage?: string | null }) {
+    this.config     = data.config ?? MOCK_CONFIG
+    this.ending     = false
+    this.controller = data.controller ?? (data.config ? createController(data.config) : createMockController())
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
+    this.log        = new GameLog()
+    this.learnOpen  = loadPreferences().learnPanel
+
+    const state = this.controller.getState()
+
+    this.log.add(describeEvent({ type: 'GameStarted', first: state.first }, state))
 
   }
 
@@ -78,6 +104,7 @@ export class Board extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     buildSmallCards(this, this.images)
     buildCardBack(this)
     this.fitCamera()
@@ -85,6 +112,13 @@ export class Board extends Phaser.Scene {
 
     const unsubscribe = this.controller.on(events => {
       this.queued.push(...events)
+
+      for (const name of soundsFor(events))
+        audio.play(name)
+
+      for (const event of events)
+        this.log.add(describeEvent(event, this.controller.getState()))
+
       this.dirty = true
 
     })
@@ -98,6 +132,13 @@ export class Board extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize'))
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.GameObject) => this.onDragEnd(pointer, object))
+    this.input.on('wheel', (pointer: Phaser.Input.Pointer, _over: unknown, _dx: number, dy: number) => {
+      if (this.logArea && contains(this.logArea.log, pointer.worldX, pointer.worldY)) {
+        this.log.scroll(dy > 0 ? -1 : 1)
+        this.dirty = true
+      }
+
+    })
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (pointer.leftButtonDown() && this.zoom.pinned)
         this.zoom.hide()
@@ -149,6 +190,7 @@ export class Board extends Phaser.Scene {
     this.drawSidePanel()
     this.drawPassButton()
 
+    this.scheduleResult()
     this.zoom = new CardZoom(this, layout.zoom, cardText)
     this.add.existing(this.zoom)
 
@@ -161,6 +203,18 @@ export class Board extends Phaser.Scene {
 
     this.queued = []
     playEvents(this, events, { sprites: collectSprites(this.layer), deckOf: player => center(this.sideOf(player).deck), leaderOf: player => this.controller.getState().players[player].leader.instanceId })
+
+  }
+
+
+  private scheduleResult() {
+    const result = gameResult(this.controller.getState())
+
+    if (!result || this.ending)
+      return
+
+    this.ending = true
+    this.time.delayedCall(RESULT_MS, () => goTo(this, 'GameOver', { config: this.config, result, images: this.images, donImage: this.donImage }))
 
   }
 
@@ -188,7 +242,19 @@ export class Board extends Phaser.Scene {
   private drawSidePanel() {
     const state = this.controller.getState()
 
-    this.layer.add(new SidePanel(this, this.layout, { header: phaseLabel(state), banner: instructionFor(state, this.legal, this.viewer), notice: this.notice, log: MOCK_LOG, onFullscreen: () => this.toggleFullscreen() }))
+    this.logArea = splitLearn(this.layout.log, this.learnOpen)
+
+    const info = this.learnOpen ? describePhase(state, this.viewer) : null
+
+    this.layer.add(new SidePanel(this, this.layout, { header: phaseLabel(state), banner: instructionFor(state, this.legal, this.viewer), notice: this.notice, log: this.log.visible(), learn: this.logArea, info, onToggleLearn: () => this.toggleLearn(), onFullscreen: () => this.toggleFullscreen() }))
+
+  }
+
+
+  private toggleLearn() {
+    this.learnOpen = !this.learnOpen
+    savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
+    this.dirty     = true
 
   }
 

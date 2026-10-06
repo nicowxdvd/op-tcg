@@ -29,8 +29,17 @@ async function imageExists(defId: string): Promise<boolean> {
 }
 
 
-export async function findCardImages(defIds: string[]): Promise<string[]> {
-  const found = await Promise.all(defIds.map(async id => await imageExists(id) ? id : null))
+export async function findCardImages(defIds: string[], onProgress: (fraction: number) => void = () => {}): Promise<string[]> {
+  let done = 0
+
+  const found = await Promise.all(defIds.map(async id => {
+    const exists = await imageExists(id)
+
+    onProgress(++done / defIds.length)
+
+    return exists ? id : null
+
+  }))
 
   return found.filter((id): id is string => id !== null)
 

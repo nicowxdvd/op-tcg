@@ -1,6 +1,6 @@
 # SPEC 07 — Modo aprendizaje (panel de fase, log, tooltips)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 06, SPEC 11
 > **Fecha:** 2026-10-02
 > **Objetivo:** Agregar al tablero un panel lateral que explica la fase actual y lo que se puede hacer, un log de partida en texto legible y tooltips de keywords, para que Nico aprenda las reglas jugando.

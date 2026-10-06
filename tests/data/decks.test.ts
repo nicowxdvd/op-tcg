@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectRegistry, loadCards, loadDeck, loadDefs } from '../../src/data'
+import { effectRegistry, listDecks, loadCards, loadDeck, loadDefs } from '../../src/data'
 import { createGame, validateDeck } from '../../src/engine/state'
 
 const DECK_IDS = ['st01', 'st02']
@@ -13,6 +13,13 @@ describe('mazos Starter Deck', () => {
     expect(defs[deck.leader].type).toBe('Leader')
     expect(deck.cards).toHaveLength(50)
     expect(() => validateDeck(defs, deck, 'p1')).not.toThrow()
+
+  })
+
+
+  it('listDecks lista los mazos con su Leader', () => {
+    expect(listDecks().map(deck => deck.id)).toEqual(DECK_IDS)
+    expect(listDecks().every(deck => deck.name && defs[deck.leader].type === 'Leader')).toBe(true)
 
   })
 
