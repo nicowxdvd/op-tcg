@@ -183,16 +183,19 @@ export function handSlots(rect: Rect, count: number, card: Size): Rect[] {
 }
 
 
-export function donRadius(rect: Rect): number {
-  return Math.min(rect.h * 0.2, rect.w / 22)
+export function donCardSize(rect: Rect): Size {
+  const h = rect.h * 0.62
+
+  return { w: h * CARD_RATIO, h }
 
 }
 
 
 export function donSlots(rect: Rect, count: number): Point[] {
-  const radius = donRadius(rect)
-  const pitch  = (rect.w - 2 * radius) / 9
+  const card  = donCardSize(rect)
+  const pad   = rect.h * 0.08
+  const pitch = Math.min(card.w * 1.15, (rect.w - card.w - 2 * pad) / 9)
 
-  return Array.from({ length: count }, (_, i): Point => ({ x: rect.x + radius + i * pitch, y: rect.y + rect.h - radius - 4 }))
+  return Array.from({ length: count }, (_, i): Point => ({ x: rect.x + pad + card.w / 2 + i * pitch, y: rect.y + pad + card.h / 2 }))
 
 }

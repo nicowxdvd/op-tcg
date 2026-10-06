@@ -15,8 +15,9 @@ import { LifeArea } from '../ui/LifeArea'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { buildPrompt, describeAction } from '../ui/prompts'
-import { buildSmallCards, preloadCardImages } from '../ui/textures'
+import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
+import { COLORS } from '../ui/theme'
 import { Zone } from '../ui/Zone'
 
 type DragSource =
@@ -24,9 +25,9 @@ type DragSource =
   | { kind: 'don' }
   | { kind: 'attacker'; id: string }
 
-const PLAYABLE  = 0xffd54a
-const ATTACK    = 0xff7043
-const ACTIVATE  = 0x4dd0e1
+const PLAYABLE  = COLORS.playable
+const ATTACK    = COLORS.attack
+const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
 
 
@@ -44,6 +45,7 @@ export class Board extends Phaser.Scene {
   private legal: Action[] = []
   private sources = new Map<Phaser.GameObjects.GameObject, DragSource>()
   private images: string[] = []
+  private donImage: string | null = null
   private ratio = 1
 
   constructor() {
@@ -52,15 +54,17 @@ export class Board extends Phaser.Scene {
   }
 
 
-  init(data: { controller?: GameController; images?: string[] }) {
+  init(data: { controller?: GameController; images?: string[]; donImage?: string | null }) {
     this.controller = data.controller ?? createMockController()
     this.images     = data.images ?? []
+    this.donImage   = data.donImage ?? null
 
   }
 
 
   preload() {
     preloadCardImages(this, this.images)
+    preloadDonImage(this, this.donImage)
 
   }
 
@@ -68,6 +72,7 @@ export class Board extends Phaser.Scene {
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
     buildSmallCards(this, this.images)
+    buildCardBack(this)
     this.fitCamera()
     this.input.mouse?.disableContextMenu()
 
@@ -234,12 +239,13 @@ export class Board extends Phaser.Scene {
 
 
   private drawDon(side: SideLayout, data: PlayerState, own: boolean) {
-    const area = new DonArea(this, side.don, { deck: data.donDeck, active: data.donActive, rested: data.donRested })
+    const attached = data.leaderAttachedDon + data.characters.reduce((sum, character) => sum + character.attachedDon, 0)
+    const area     = new DonArea(this, side.don, { active: data.donActive, rested: data.donRested, attached })
 
-    this.layer.add(area)
+    this.layer.add([area, new Zone(this, side.donDeck, 'DON!! deck', data.donDeck, data.donDeck ? { def: null, donFace: true } : null, this.layout.card)])
 
     if (own && area.token && this.legal.some(action => action.type === 'AttachDon')) {
-      area.token.setStrokeStyle(4, PLAYABLE).setInteractive({ useHandCursor: true })
+      area.token.setHighlight(PLAYABLE).enableInput()
       this.input.setDraggable(area.token)
       this.sources.set(area.token, { kind: 'don' })
     }
