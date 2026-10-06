@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
-import type { Action, CardInstance, PlayerId, PlayerState } from '../engine'
+import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createMockController } from '../dev/mockGame'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
@@ -18,6 +18,7 @@ import { PlayerPanel } from '../ui/PlayerPanel'
 import { MOCK_COUNTER_CLOCK, MOCK_LOG, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
+import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
@@ -51,6 +52,7 @@ export class Board extends Phaser.Scene {
   private images: string[] = []
   private donImage: string | null = null
   private ratio = 1
+  private queued: GameEvent[] = []
   private lastActive: PlayerId | null = null
 
   constructor() {
@@ -81,7 +83,11 @@ export class Board extends Phaser.Scene {
     this.fitCamera()
     this.input.mouse?.disableContextMenu()
 
-    const unsubscribe = this.controller.on(() => { this.dirty = true })
+    const unsubscribe = this.controller.on(events => {
+      this.queued.push(...events)
+      this.dirty = true
+
+    })
 
     this.events.once('shutdown', () => {
       unsubscribe()
@@ -150,6 +156,17 @@ export class Board extends Phaser.Scene {
 
     if (prompt)
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
+
+    const events = this.queued
+
+    this.queued = []
+    playEvents(this, events, { sprites: collectSprites(this.layer), deckOf: player => center(this.sideOf(player).deck), leaderOf: player => this.controller.getState().players[player].leader.instanceId })
+
+  }
+
+
+  private sideOf(player: PlayerId): SideLayout {
+    return player === this.viewer ? this.layout.self : this.layout.rival
 
   }
 

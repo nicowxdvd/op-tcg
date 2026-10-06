@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import type { CardDef } from '../engine'
 import type { Size } from './layout'
-import { CARD_FACES, COLORS, cssAlpha, RADIUS, SHADOW, textStyle } from './theme'
+import { CARD_FACES, COLORS, cssAlpha, DURATION, RADIUS, SHADOW, textStyle } from './theme'
 import { BACK_KEY, bestTextureKey, DON_KEY, hasCardImage, hasDonImage } from './textures'
 
 export interface CardView {
@@ -77,6 +77,17 @@ export class CardSprite extends Phaser.GameObjects.Container {
     }
 
     return this
+
+  }
+
+
+  flash(color: number): void {
+    const { w, h } = this.cardSize
+    const overlay  = this.scene.add.graphics()
+
+    overlay.fillStyle(color, 0.6).fillRoundedRect(-w / 2, -h / 2, w, h, RADIUS.card)
+    this.add(overlay)
+    this.scene.tweens.add({ targets: overlay, alpha: 0, duration: DURATION.move, onComplete: () => overlay.destroy() })
 
   }
 
