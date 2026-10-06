@@ -12,6 +12,9 @@ import { HandView } from '../ui/HandView'
 import { center, computeLayout, contains } from '../ui/layout'
 import type { BoardLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
+import { PlayerBadge } from '../ui/PlayerBadge'
+import { PlayerPanel } from '../ui/PlayerPanel'
+import { MOCK_COUNTER_CLOCK, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { buildPrompt, describeAction } from '../ui/prompts'
@@ -47,6 +50,7 @@ export class Board extends Phaser.Scene {
   private images: string[] = []
   private donImage: string | null = null
   private ratio = 1
+  private lastActive: PlayerId | null = null
 
   constructor() {
     super('Board')
@@ -132,6 +136,7 @@ export class Board extends Phaser.Scene {
     const { layout } = this
     const rival      = opponentOf(this.viewer)
 
+    this.drawFrames(state.active, rival)
     this.drawSide(rival, layout.rival, false)
     this.drawSide(this.viewer, layout.self, true)
     this.drawStatus()
@@ -144,6 +149,20 @@ export class Board extends Phaser.Scene {
 
     if (prompt)
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
+
+  }
+
+
+  private drawFrames(active: PlayerId, rival: PlayerId) {
+    const state   = this.controller.getState()
+    const changed = this.lastActive !== null && this.lastActive !== active
+    const counter = state.battle?.step === 'counter' ? opponentOf(state.battle.attackerPlayer) : null
+    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL, isRival: true }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF, isRival: false }]
+
+    this.lastActive = active
+
+    for (const { id, side, mock, isRival } of sides)
+      this.layer.add([new PlayerPanel(this, side.panel, isRival, id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
 
   }
 
