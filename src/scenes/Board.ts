@@ -3,6 +3,7 @@ import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createController } from '../app/createController'
 import type { MatchConfig } from '../app/gameConfig'
+import { gameResult } from '../app/gameResult'
 import { loadPreferences, savePreferences } from '../app/preferences'
 import { createMockController } from '../dev/mockGame'
 import { CardSprite } from '../ui/CardSprite'
@@ -41,6 +42,9 @@ const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
 const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
+const RESULT_MS = 1800
+
+const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0 }
 
 
 export class Board extends Phaser.Scene {
@@ -62,6 +66,8 @@ export class Board extends Phaser.Scene {
   private lastActive: PlayerId | null = null
   private log = new GameLog()
   private learnOpen = true
+  private config: MatchConfig = MOCK_CONFIG
+  private ending = false
   private logArea: LearnLayout | null = null
 
   constructor() {
@@ -71,6 +77,8 @@ export class Board extends Phaser.Scene {
 
 
   init(data: { config?: MatchConfig; controller?: GameController; images?: string[]; donImage?: string | null }) {
+    this.config     = data.config ?? MOCK_CONFIG
+    this.ending     = false
     this.controller = data.controller ?? (data.config ? createController(data.config) : createMockController())
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
@@ -175,6 +183,7 @@ export class Board extends Phaser.Scene {
     this.drawSidePanel()
     this.drawPassButton()
 
+    this.scheduleResult()
     this.zoom = new CardZoom(this, layout.zoom, cardText)
     this.add.existing(this.zoom)
 
@@ -187,6 +196,18 @@ export class Board extends Phaser.Scene {
 
     this.queued = []
     playEvents(this, events, { sprites: collectSprites(this.layer), deckOf: player => center(this.sideOf(player).deck), leaderOf: player => this.controller.getState().players[player].leader.instanceId })
+
+  }
+
+
+  private scheduleResult() {
+    const result = gameResult(this.controller.getState())
+
+    if (!result || this.ending)
+      return
+
+    this.ending = true
+    this.time.delayedCall(RESULT_MS, () => this.scene.start('GameOver', { config: this.config, result, images: this.images, donImage: this.donImage }))
 
   }
 
