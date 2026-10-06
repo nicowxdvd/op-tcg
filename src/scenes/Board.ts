@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
-import type { Action, CardInstance, PlayerId, PlayerState } from '../engine'
+import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createMockController } from '../dev/mockGame'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
@@ -8,14 +8,22 @@ import { CardZoom } from '../ui/CardZoom'
 import { cardText } from '../ui/cardText'
 import { DonArea } from '../ui/DonArea'
 import { GameController } from '../ui/GameController'
-import { HandView } from '../ui/HandView'
 import { center, computeLayout, contains } from '../ui/layout'
 import type { BoardLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
+import { FanView } from '../ui/FanView'
+import { instructionFor, phaseLabel } from '../ui/instructions'
+import { PlayerBadge } from '../ui/PlayerBadge'
+import { PlayerPanel } from '../ui/PlayerPanel'
+import { MOCK_COUNTER_CLOCK, MOCK_LOG, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
+import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction } from '../ui/prompts'
-import { preloadCardImages } from '../ui/textures'
+import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
+import { pixelRatio } from '../ui/viewport'
+import { COLORS, RADIUS, textStyle } from '../ui/theme'
+import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
 
 type DragSource =
@@ -23,9 +31,9 @@ type DragSource =
   | { kind: 'don' }
   | { kind: 'attacker'; id: string }
 
-const PLAYABLE  = 0xffd54a
-const ATTACK    = 0xff7043
-const ACTIVATE  = 0x4dd0e1
+const PLAYABLE  = COLORS.playable
+const ATTACK    = COLORS.attack
+const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
 
 
@@ -36,13 +44,16 @@ export class Board extends Phaser.Scene {
   private layer!: Phaser.GameObjects.Container
   private zoom!: CardZoom
   private dialog: PromptDialog | null = null
-  private status!: Phaser.GameObjects.Text
   private notice: string | null = null
   private dirty = true
   private viewer: PlayerId = 'p1'
   private legal: Action[] = []
   private sources = new Map<Phaser.GameObjects.GameObject, DragSource>()
   private images: string[] = []
+  private donImage: string | null = null
+  private ratio = 1
+  private queued: GameEvent[] = []
+  private lastActive: PlayerId | null = null
 
   constructor() {
     super('Board')
@@ -50,30 +61,41 @@ export class Board extends Phaser.Scene {
   }
 
 
-  init(data: { controller?: GameController; images?: string[] }) {
+  init(data: { controller?: GameController; images?: string[]; donImage?: string | null }) {
     this.controller = data.controller ?? createMockController()
     this.images     = data.images ?? []
+    this.donImage   = data.donImage ?? null
 
   }
 
 
   preload() {
     preloadCardImages(this, this.images)
+    preloadDonImage(this, this.donImage)
 
   }
 
 
   create() {
-    this.layout = computeLayout(this.scale.width, this.scale.height)
+    this.ratio = pixelRatio(window.devicePixelRatio)
+    buildSmallCards(this, this.images)
+    buildCardBack(this)
+    this.fitCamera()
     this.input.mouse?.disableContextMenu()
 
-    const unsubscribe = this.controller.on(() => { this.dirty = true })
+    const unsubscribe = this.controller.on(events => {
+      this.queued.push(...events)
+      this.dirty = true
+
+    })
 
     this.events.once('shutdown', () => {
       unsubscribe()
       this.controller.dispose()
 
     })
+    this.scale.on('resize', () => this.fitCamera())
+    this.events.once('shutdown', () => this.scale.off('resize'))
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.GameObject) => this.onDragEnd(pointer, object))
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -81,6 +103,14 @@ export class Board extends Phaser.Scene {
         this.zoom.hide()
 
     })
+
+  }
+
+
+  private fitCamera() {
+    this.cameras.main.setOrigin(0, 0).setZoom(this.ratio)
+    this.layout = computeLayout(this.scale.width / this.ratio, this.scale.height / this.ratio)
+    this.dirty  = true
 
   }
 
@@ -113,9 +143,10 @@ export class Board extends Phaser.Scene {
     const { layout } = this
     const rival      = opponentOf(this.viewer)
 
+    this.drawFrames(state.active, rival)
     this.drawSide(rival, layout.rival, false)
     this.drawSide(this.viewer, layout.self, true)
-    this.drawStatus()
+    this.drawSidePanel()
     this.drawPassButton()
 
     this.zoom = new CardZoom(this, layout.zoom, cardText)
@@ -126,16 +157,47 @@ export class Board extends Phaser.Scene {
     if (prompt)
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
 
+    const events = this.queued
+
+    this.queued = []
+    playEvents(this, events, { sprites: collectSprites(this.layer), deckOf: player => center(this.sideOf(player).deck), leaderOf: player => this.controller.getState().players[player].leader.instanceId })
+
   }
 
 
-  private drawStatus() {
-    const state = this.controller.getState()
-    const rect  = this.layout.status
-    const line  = state.winner ? `Game over: ${state.winner.toUpperCase()} wins` : state.phase === 'mulligan' ? `Mulligan (${this.viewer.toUpperCase()})` : `Turn ${state.turn} - ${state.active.toUpperCase()} - ${state.phase}  (viewing ${this.viewer.toUpperCase()})`
-    const text  = this.add.text(rect.x, rect.y + rect.h / 2, this.notice ?? line, { fontSize: `${Math.round(rect.h * 0.45)}px`, color: this.notice ? '#ff8a80' : '#ffffff' }).setOrigin(0, 0.5)
+  private sideOf(player: PlayerId): SideLayout {
+    return player === this.viewer ? this.layout.self : this.layout.rival
 
-    this.layer.add(text)
+  }
+
+
+  private drawFrames(active: PlayerId, rival: PlayerId) {
+    const state   = this.controller.getState()
+    const changed = this.lastActive !== null && this.lastActive !== active
+    const counter = state.battle?.step === 'counter' ? opponentOf(state.battle.attackerPlayer) : null
+    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL, isRival: true }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF, isRival: false }]
+
+    this.lastActive = active
+
+    for (const { id, side, mock, isRival } of sides)
+      this.layer.add([new PlayerPanel(this, side.panel, isRival, id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
+
+  }
+
+
+  private drawSidePanel() {
+    const state = this.controller.getState()
+
+    this.layer.add(new SidePanel(this, this.layout, { header: phaseLabel(state), banner: instructionFor(state, this.legal, this.viewer), notice: this.notice, log: MOCK_LOG, onFullscreen: () => this.toggleFullscreen() }))
+
+  }
+
+
+  private toggleFullscreen() {
+    if (this.scale.isFullscreen)
+      this.scale.stopFullscreen()
+    else
+      this.scale.startFullscreen()
 
   }
 
@@ -148,12 +210,13 @@ export class Board extends Phaser.Scene {
 
     const { button } = this.layout
     const middle     = center(button)
-    const box        = this.add.rectangle(middle.x, middle.y, button.w, button.h, 0x2e7d32).setStrokeStyle(2, 0xffffff)
-    const label      = this.add.text(middle.x, middle.y, 'End turn', { fontSize: `${Math.round(button.h * 0.5)}px`, color: '#ffffff' }).setOrigin(0.5)
+    const box        = this.add.graphics()
+    const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
+    const label      = this.add.text(middle.x, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
 
-    box.setInteractive({ useHandCursor: true })
-    box.on('pointerup', () => this.send(pass))
-    this.layer.add([box, label])
+    box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
+    hit.on('pointerup', () => this.send(pass))
+    this.layer.add([box, label, hit])
 
   }
 
@@ -220,12 +283,13 @@ export class Board extends Phaser.Scene {
 
 
   private drawDon(side: SideLayout, data: PlayerState, own: boolean) {
-    const area = new DonArea(this, side.don, { deck: data.donDeck, active: data.donActive, rested: data.donRested })
+    const attached = data.leaderAttachedDon + data.characters.reduce((sum, character) => sum + character.attachedDon, 0)
+    const area     = new DonArea(this, side.don, { active: data.donActive, rested: data.donRested, attached })
 
-    this.layer.add(area)
+    this.layer.add([area, new Zone(this, side.donDeck, 'DON!! deck', data.donDeck, data.donDeck ? { def: null, donFace: true } : null, this.layout.card)])
 
     if (own && area.token && this.legal.some(action => action.type === 'AttachDon')) {
-      area.token.setStrokeStyle(4, PLAYABLE).setInteractive({ useHandCursor: true })
+      area.token.setHighlight(PLAYABLE).enableInput()
       this.input.setDraggable(area.token)
       this.sources.set(area.token, { kind: 'don' })
     }
@@ -237,12 +301,18 @@ export class Board extends Phaser.Scene {
     const state    = this.controller.getState()
     const playable = new Set(this.legal.flatMap(action => action.type === 'PlayCharacter' || action.type === 'PlayEvent' || action.type === 'PlayStage' ? [action.instanceId] : []))
     const views    = data.hand.map((instance): CardView => ({ def: own ? state.defs[instance.defId] : null, instanceId: instance.instanceId }))
-    const hand     = new HandView(this, side.hand, views, this.layout.handCard)
+
+    if (!own) {
+      const back = { w: this.layout.handCard.w * 0.8, h: this.layout.handCard.h * 0.8 }
+
+      this.layer.add(new FanView(this, side.hand, views, back, 'rival'))
+
+      return
+    }
+
+    const hand = new FanView(this, side.hand, views, this.layout.handCard, 'self')
 
     this.layer.add(hand)
-
-    if (!own)
-      return
 
     for (const sprite of hand.sprites) {
       this.wireZoom(sprite)
@@ -296,7 +366,7 @@ export class Board extends Phaser.Scene {
     if (!source)
       return
 
-    const actions = this.actionsAt(source, pointer.x, pointer.y)
+    const actions = this.actionsAt(source, pointer.worldX, pointer.worldY)
 
     if (actions.length === 1)
       this.send(actions[0])
@@ -364,7 +434,7 @@ export class Board extends Phaser.Scene {
 
   private showDialog(title: string, options: PromptOption[]) {
     this.dialog?.destroy()
-    this.dialog = new PromptDialog(this, this.layout.width / 2, this.layout.height / 2, title, options)
+    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options)
     this.add.existing(this.dialog)
 
   }

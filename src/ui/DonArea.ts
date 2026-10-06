@@ -1,38 +1,48 @@
 import * as Phaser from 'phaser'
-import { donRadius, donSlots } from './layout'
+import { CardSprite } from './CardSprite'
+import { dashedRoundRect } from './draw'
+import { donCardSize, donSlots } from './layout'
 import type { Rect } from './layout'
+import { COLORS, RADIUS, textStyle } from './theme'
 
 export interface DonCounts {
-  deck: number
   active: number
   rested: number
+  attached: number
 
 }
 
 
 export class DonArea extends Phaser.GameObjects.Container {
 
-  token: Phaser.GameObjects.Arc | null = null
+  token: CardSprite | null = null
 
   constructor(scene: Phaser.Scene, rect: Rect, counts: DonCounts) {
     super(scene, 0, 0)
 
-    const font   = Math.max(9, Math.round(rect.h * 0.09))
-    const radius = donRadius(rect)
-    const slots  = donSlots(rect, counts.active + counts.rested)
+    const font  = Math.max(8, Math.round(rect.h * 0.075))
+    const total = counts.active + counts.rested
+    const card  = donCardSize(rect)
+    const slots = donSlots(rect, total)
+    const frame = scene.add.graphics()
 
-    this.add(scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h).setStrokeStyle(1, 0xffffff, 0.35))
-    this.add(scene.add.text(rect.x + 3, rect.y + 2, `DON!! deck ${counts.deck}  active ${counts.active}  rested ${counts.rested}`, { fontSize: `${font}px`, color: '#cfd8dc', backgroundColor: '#00000080' }))
+    frame.fillStyle(COLORS.zoneFill, 0.55).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
+    frame.lineStyle(1.5, COLORS.zoneBorder, 0.6)
+    dashedRoundRect(frame, rect, RADIUS.zone, 5, 4)
+    this.add(frame)
+    this.add(scene.add.text(rect.x + 5, rect.y + 3, 'COST AREA', textStyle(font * 0.85, COLORS.zoneLabel)).setAlpha(0.8))
+    this.add(scene.add.text(rect.x + 6, rect.y + rect.h - 4, `ACTIVOS: ${counts.active} · INACTIVOS: ${counts.rested} · ADJUNTOS: ${counts.attached}`, textStyle(font, COLORS.textDim)).setOrigin(0, 1))
+
+    if (total === 0)
+      this.add(scene.add.text(rect.x + rect.w / 2, rect.y + rect.h * 0.4, 'SIN DON!!', textStyle(font * 1.2, COLORS.zoneLabel)).setOrigin(0.5).setAlpha(0.7))
 
     slots.forEach((slot, i) => {
-      const active = i < counts.active
-      const arc    = scene.add.circle(slot.x, slot.y, radius, 0xf4c542, active ? 1 : 0.35).setStrokeStyle(2, 0xffffff, active ? 1 : 0.4)
+      const sprite = new CardSprite(scene, slot.x, slot.y, card, { def: null, donFace: true, rested: i >= counts.active })
 
-      this.add(arc)
-      this.add(scene.add.text(slot.x, slot.y, 'D', { fontSize: `${Math.round(radius)}px`, color: '#4a3200' }).setOrigin(0.5))
+      this.add(sprite)
 
-      if (i === 0 && active)
-        this.token = arc
+      if (i === 0 && counts.active > 0)
+        this.token = sprite
 
     })
 
