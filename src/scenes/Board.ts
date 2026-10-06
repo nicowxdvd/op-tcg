@@ -1,7 +1,13 @@
 import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
+import { createController } from '../app/createController'
+import type { MatchConfig } from '../app/gameConfig'
+import { gameResult } from '../app/gameResult'
+import { soundsFor } from '../app/sounds'
+import { loadPreferences, savePreferences } from '../app/preferences'
 import { createMockController } from '../dev/mockGame'
+import { audio } from '../ui/AudioManager'
 import { CardSprite } from '../ui/CardSprite'
 import type { CardView } from '../ui/CardSprite'
 import { CardZoom } from '../ui/CardZoom'
@@ -25,6 +31,7 @@ import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 import { COLORS, RADIUS, textStyle } from '../ui/theme'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
@@ -38,6 +45,9 @@ const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
 const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
+const RESULT_MS = 1800
+
+const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0 }
 
 
 export class Board extends Phaser.Scene {
@@ -59,6 +69,8 @@ export class Board extends Phaser.Scene {
   private lastActive: PlayerId | null = null
   private log = new GameLog()
   private learnOpen = true
+  private config: MatchConfig = MOCK_CONFIG
+  private ending = false
   private logArea: LearnLayout | null = null
 
   constructor() {
@@ -67,12 +79,14 @@ export class Board extends Phaser.Scene {
   }
 
 
-  init(data: { controller?: GameController; images?: string[]; donImage?: string | null }) {
-    this.controller = data.controller ?? createMockController()
+  init(data: { config?: MatchConfig; controller?: GameController; images?: string[]; donImage?: string | null }) {
+    this.config     = data.config ?? MOCK_CONFIG
+    this.ending     = false
+    this.controller = data.controller ?? (data.config ? createController(data.config) : createMockController())
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
     this.log        = new GameLog()
-    this.learnOpen  = true
+    this.learnOpen  = loadPreferences().learnPanel
 
     const state = this.controller.getState()
 
@@ -90,6 +104,7 @@ export class Board extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     buildSmallCards(this, this.images)
     buildCardBack(this)
     this.fitCamera()
@@ -97,6 +112,9 @@ export class Board extends Phaser.Scene {
 
     const unsubscribe = this.controller.on(events => {
       this.queued.push(...events)
+
+      for (const name of soundsFor(events))
+        audio.play(name)
 
       for (const event of events)
         this.log.add(describeEvent(event, this.controller.getState()))
@@ -172,6 +190,7 @@ export class Board extends Phaser.Scene {
     this.drawSidePanel()
     this.drawPassButton()
 
+    this.scheduleResult()
     this.zoom = new CardZoom(this, layout.zoom, cardText)
     this.add.existing(this.zoom)
 
@@ -184,6 +203,18 @@ export class Board extends Phaser.Scene {
 
     this.queued = []
     playEvents(this, events, { sprites: collectSprites(this.layer), deckOf: player => center(this.sideOf(player).deck), leaderOf: player => this.controller.getState().players[player].leader.instanceId })
+
+  }
+
+
+  private scheduleResult() {
+    const result = gameResult(this.controller.getState())
+
+    if (!result || this.ending)
+      return
+
+    this.ending = true
+    this.time.delayedCall(RESULT_MS, () => goTo(this, 'GameOver', { config: this.config, result, images: this.images, donImage: this.donImage }))
 
   }
 
@@ -222,6 +253,7 @@ export class Board extends Phaser.Scene {
 
   private toggleLearn() {
     this.learnOpen = !this.learnOpen
+    savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
 
   }

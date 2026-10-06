@@ -1,6 +1,6 @@
 # SPEC 09 — Pulido (menú, selección de mazo, pantalla final, sonido)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 05, SPEC 08
 > **Fecha:** 2026-10-02
 > **Objetivo:** Completar el flujo de la aplicación con un menú principal, selección de mazo, pantalla de fin de partida y sonido, para que Nico pueda abrir el juego, elegir mazo y jugar una partida completa contra la CPU sin tocar código.
