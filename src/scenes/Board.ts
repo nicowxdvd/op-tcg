@@ -31,6 +31,7 @@ import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 import { COLORS, RADIUS, textStyle } from '../ui/theme'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
@@ -103,6 +104,7 @@ export class Board extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     buildSmallCards(this, this.images)
     buildCardBack(this)
     this.fitCamera()
@@ -212,7 +214,7 @@ export class Board extends Phaser.Scene {
       return
 
     this.ending = true
-    this.time.delayedCall(RESULT_MS, () => this.scene.start('GameOver', { config: this.config, result, images: this.images, donImage: this.donImage }))
+    this.time.delayedCall(RESULT_MS, () => goTo(this, 'GameOver', { config: this.config, result, images: this.images, donImage: this.donImage }))
 
   }
 

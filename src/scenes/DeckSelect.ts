@@ -7,6 +7,7 @@ import { Button } from '../ui/Button'
 import { bestTextureKey, hasCardImage, preloadCardImages } from '../ui/textures'
 import { CARD_FACES, COLORS, RADIUS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 
 interface DeckSelectData {
   mode?: MatchConfig['mode']
@@ -52,6 +53,7 @@ export class DeckSelect extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     this.input.mouse?.disableContextMenu()
     this.build()
     this.scale.on('resize', () => this.build())
@@ -108,7 +110,7 @@ export class DeckSelect extends Phaser.Scene {
     if (this.error)
       this.add.text(width / 2, buttonY - 50 * unit, this.error, { ...textStyle(15 * unit, COLORS.attack), align: 'center', wordWrap: { width: width * 0.8 } }).setOrigin(0.5)
 
-    this.add.existing(new Button(this, width / 2 - 110 * unit, buttonY, 190 * unit, 48 * unit, 'Volver', () => this.scene.start('Menu', { images: this.images, donImage: this.donImage }), { fontSize: 18 * unit }))
+    this.add.existing(new Button(this, width / 2 - 110 * unit, buttonY, 190 * unit, 48 * unit, 'Volver', () => goTo(this, 'Menu', { images: this.images, donImage: this.donImage }), { fontSize: 18 * unit }))
     this.add.existing(new Button(this, width / 2 + 110 * unit, buttonY, 190 * unit, 48 * unit, 'Jugar', () => this.play(), { primary: true, fontSize: 18 * unit }))
 
   }
@@ -159,7 +161,7 @@ export class DeckSelect extends Phaser.Scene {
       return
     }
 
-    this.scene.start('Board', { config, images: this.images, donImage: this.donImage })
+    goTo(this, 'Board', { config, images: this.images, donImage: this.donImage })
 
   }
 

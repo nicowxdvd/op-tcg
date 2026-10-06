@@ -3,6 +3,7 @@ import { audio } from '../ui/AudioManager'
 import { Button } from '../ui/Button'
 import { COLORS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 
 interface MenuData {
   images?: string[]
@@ -32,6 +33,7 @@ export class Menu extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     this.input.mouse?.disableContextMenu()
     this.build()
     this.scale.on('resize', () => this.build())
@@ -84,7 +86,7 @@ export class Menu extends Phaser.Scene {
 
 
   private start(cpu: boolean) {
-    this.scene.start('DeckSelect', { mode: cpu ? 'cpu' : 'hotseat', images: this.images, donImage: this.donImage })
+    goTo(this, 'DeckSelect', { mode: cpu ? 'cpu' : 'hotseat', images: this.images, donImage: this.donImage })
 
   }
 

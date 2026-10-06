@@ -6,6 +6,7 @@ import type { GameResult } from '../app/gameResult'
 import { Button } from '../ui/Button'
 import { COLORS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
+import { fadeIn, goTo } from '../ui/transitions'
 
 interface GameOverData {
   config: MatchConfig
@@ -41,6 +42,7 @@ export class GameOver extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    fadeIn(this)
     this.input.mouse?.disableContextMenu()
     this.build()
     this.scale.on('resize', () => this.build())
@@ -66,13 +68,13 @@ export class GameOver extends Phaser.Scene {
     this.add.text(cx, top + 140 * unit, reasonLabel(this.result, this.config.mode), textStyle(20 * unit, COLORS.text, false)).setOrigin(0.5)
     this.add.text(cx, top + 175 * unit, `Turnos jugados: ${this.result.turns}`, textStyle(20 * unit, COLORS.text, false)).setOrigin(0.5)
     this.add.existing(new Button(this, cx, top + 260 * unit, buttonW, buttonH, 'Revancha', () => this.rematch(), { primary: true, fontSize: 20 * unit }))
-    this.add.existing(new Button(this, cx, top + 260 * unit + buttonH + 16 * unit, buttonW, buttonH, 'Volver al menú', () => this.scene.start('Menu', { images: this.images, donImage: this.donImage }), { fontSize: 20 * unit }))
+    this.add.existing(new Button(this, cx, top + 260 * unit + buttonH + 16 * unit, buttonW, buttonH, 'Volver al menú', () => goTo(this, 'Menu', { images: this.images, donImage: this.donImage }), { fontSize: 20 * unit }))
 
   }
 
 
   private rematch() {
-    this.scene.start('Board', { config: rematchConfig(this.config), images: this.images, donImage: this.donImage })
+    goTo(this, 'Board', { config: rematchConfig(this.config), images: this.images, donImage: this.donImage })
 
   }
 

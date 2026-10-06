@@ -3,6 +3,7 @@ import { loadDefs } from '../data'
 import { findCardImages, findDonImage, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { COLORS, RADIUS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
+import { goTo } from '../ui/transitions'
 
 const SEARCH_SHARE = 0.15
 
@@ -37,7 +38,7 @@ export class Boot extends Phaser.Scene {
     preloadCardImages(this, images)
     preloadDonImage(this, donImage)
     this.load.on('progress', (fraction: number) => this.progress(SEARCH_SHARE + fraction * (1 - SEARCH_SHARE)))
-    this.load.once('complete', () => this.scene.start(import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock') ? 'Board' : 'Menu', { images, donImage }))
+    this.load.once('complete', () => goTo(this, import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock') ? 'Board' : 'Menu', { images, donImage }))
     this.load.start()
 
   }
