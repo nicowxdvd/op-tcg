@@ -64,8 +64,8 @@ export function buildPrompt(state: GameState, legal: Action[], viewer: PlayerId)
     return { title: `${viewer.toUpperCase()}: keep your hand or redraw?`, options: options(legal) }
   if (state.pending)
     return { title: `${viewer.toUpperCase()}: choose (${state.pending.kind})`, options: options(legal) }
-  if (state.battle && state.battle.attackerPlayer !== viewer) {
-    const titles = { block: 'Block step', counter: 'Counter step', trigger: 'Trigger step' }
+  if (state.battle && state.battle.attackerPlayer !== viewer && state.battle.step !== 'counter') {
+    const titles = { block: 'Block step', trigger: 'Trigger step' }
 
     return { title: `${viewer.toUpperCase()}: ${titles[state.battle.step]}`, options: options(legal) }
 
