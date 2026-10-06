@@ -117,7 +117,8 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const pad         = panelH * 0.04
   const cardW       = Math.min(panelH * 0.28 * CARD_RATIO, (boardW - 2 * pad) / CARD_UNITS)
   const card        = { w: cardW, h: cardW / CARD_RATIO }
-  const handH       = Math.min(panelH * 0.30, (gutter - 2 * margin) * 0.5 / CARD_RATIO)
+  const rivalHandH  = Math.min(panelH * 0.30, (gutter - 2 * margin) * 0.5 / CARD_RATIO)
+  const handH       = panelH * 0.42
   const handCard    = { w: handH * CARD_RATIO * 0.92, h: handH * 0.92 }
   const selfPanel   = { x: boardX, y: height - margin - panelH, w: boardW, h: panelH }
   const zones       = selfZones(selfPanel, card, pad)
@@ -131,9 +132,9 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const rivalBadgeY = fullscreen.y + fullscreen.h + margin / 2
   const selfBadgeY  = selfPanel.y + pad
   const rivalPanel  = turn(selfPanel)
-  const self: SideLayout  = { panel: selfPanel, badge: { x: cx + margin, y: selfBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: selfBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: cx + margin, y: height - margin - handH, w: gutter - 2 * margin, h: handH }, ...zones }
-  const rival: SideLayout = { panel: rivalPanel, badge: { x: cx + margin, y: rivalBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: rivalBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: sideX, y: margin, w: sideW, h: handH }, life: turn(zones.life), leader: turn(zones.leader), stage: turn(zones.stage), don: turn(zones.don), donDeck: turn(zones.donDeck), deck: turn(zones.deck), trash: turn(zones.trash), characters: turn(zones.characters), slots: zones.slots.map(turn).reverse() }
-  const status      = { x: sideX, y: margin + handH + margin, w: sideW, h: height * 0.095 }
+  const self: SideLayout  = { panel: selfPanel, badge: { x: cx + margin, y: selfBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: selfBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: cx + margin, y: height - margin - handH, w: gutter - 2 * margin + handCard.w, h: handH }, ...zones }
+  const rival: SideLayout = { panel: rivalPanel, badge: { x: cx + margin, y: rivalBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: rivalBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: sideX, y: margin, w: sideW, h: rivalHandH }, life: turn(zones.life), leader: turn(zones.leader), stage: turn(zones.stage), don: turn(zones.don), donDeck: turn(zones.donDeck), deck: turn(zones.deck), trash: turn(zones.trash), characters: turn(zones.characters), slots: zones.slots.map(turn).reverse() }
+  const status      = { x: sideX, y: margin + rivalHandH + margin, w: sideW, h: height * 0.095 }
   const banner      = { x: sideX, y: status.y + status.h + margin, w: sideW, h: height * 0.12 }
   const report      = { x: sideX, y: height - margin - height * 0.05, w: sideW, h: height * 0.05 }
   const button      = { x: sideX, y: report.y - margin - height * 0.055, w: sideW, h: height * 0.055 }

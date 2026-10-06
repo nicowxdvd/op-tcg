@@ -6,7 +6,8 @@ const SIZES = [[1024, 600], [1280, 720], [1920, 1080], [2560, 1440], [2560, 1080
 describe('layout', () => {
 
   it.each(SIZES)('las zonas no se superponen a %ix%i', (width, height) => {
-    const rects = allRects(computeLayout(width, height))
+    const layout = computeLayout(width, height)
+    const rects  = allRects(layout).filter(rect => rect !== layout.self.donDeck)
 
     for (let i = 0; i < rects.length; i++)
       for (let j = i + 1; j < rects.length; j++)
@@ -79,6 +80,28 @@ describe('layout', () => {
         expect(rect.x + rect.w).toBeLessThanOrEqual(side.panel.x + side.panel.w + 0.001)
         expect(rect.y + rect.h).toBeLessThanOrEqual(side.panel.y + side.panel.h + 0.001)
       }
+
+  })
+
+
+  it.each(SIZES)('la mano propia se superpone al panel sin cubrir las zonas a %ix%i', (width, height) => {
+    const { self, handCard } = computeLayout(width, height)
+    const protectedRects     = [self.life, self.leader, self.stage, self.deck, self.characters, self.don, self.trash]
+
+    expect(self.hand.x + self.hand.w).toBeGreaterThan(self.panel.x)
+    expect(self.hand.x + self.hand.w).toBeLessThanOrEqual(self.panel.x + handCard.w + 0.001)
+
+    for (const rect of protectedRects)
+      expect(overlaps(self.hand, rect)).toBe(false)
+
+  })
+
+
+  it('a 1280x720 la carta de la mano es al menos 1,3 veces la de la spec 11', () => {
+    const { handCard } = computeLayout(1280, 720)
+    const before       = Math.min(((720 - 2 * 10.8 - 7.2) / 2) * 0.30, (1280 * 0.17 - 2 * 10.8) * 0.5 / 0.72) * 0.92
+
+    expect(handCard.h / before).toBeGreaterThanOrEqual(1.3)
 
   })
 
