@@ -23,9 +23,9 @@ describe('instructions', () => {
   it('pide actuar cuando hay acciones legales', () => {
     const controller = createMockController()
     const state      = controller.getState()
-    const legal      = controller.getLegal('p1')
+    const actor      = controller.actor()
 
-    expect(instructionFor(state, legal, 'p1')?.title).toBe('ACTÚA TÚ')
+    expect(instructionFor(state, controller.getLegal(actor), actor)?.title).toBe('ACTÚA TÚ')
 
   })
 

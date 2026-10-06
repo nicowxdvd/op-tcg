@@ -169,20 +169,6 @@ export function center(rect: Rect): Point {
 }
 
 
-export function handSlots(rect: Rect, count: number, card: Size): Rect[] {
-  if (count === 0)
-    return []
-
-  const natural = card.w * 1.1
-  const pitch   = count > 1 ? Math.min(natural, (rect.w - card.w) / (count - 1)) : natural
-  const used    = card.w + pitch * (count - 1)
-  const left    = rect.x + (rect.w - used) / 2
-
-  return Array.from({ length: count }, (_, i): Rect => ({ x: left + i * pitch, y: rect.y, w: card.w, h: card.h }))
-
-}
-
-
 export function donCardSize(rect: Rect): Size {
   const h = rect.h * 0.62
 
@@ -218,7 +204,7 @@ export function fanSlots(rect: Rect, count: number, card: Size): FanSlot[] {
   const pitch    = count > 1 ? Math.min(card.w * 0.7, reach / (count - 1)) : 0
   const step     = count > 1 ? Math.min(6, 36 / (count - 1)) : 0
   const sag      = card.h * 0.012
-  const baseline = rect.y + card.h / 2 + card.h * 0.04
+  const baseline = rect.y + card.h / 2 - card.h * 0.06
   const centerX  = rect.x + rect.w / 2
 
   return Array.from({ length: count }, (_, i): FanSlot => ({ x: centerX + (i - mid) * pitch, y: baseline + (i - mid) ** 2 * sag, angle: (i - mid) * step }))

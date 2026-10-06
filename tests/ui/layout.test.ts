@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allRects, computeLayout, contains, donSlots, fanSlots, handSlots, overlaps } from '../../src/ui/layout'
+import { allRects, computeLayout, contains, donSlots, fanSlots, overlaps } from '../../src/ui/layout'
 
 const SIZES = [[1024, 600], [1280, 720], [1920, 1080], [2560, 1440], [2560, 1080]] as const
 
@@ -90,23 +90,6 @@ describe('layout', () => {
 
     for (const slot of self.slots)
       expect(contains(self.characters, slot.x + slot.w / 2, slot.y + slot.h / 2)).toBe(true)
-
-  })
-
-
-  it('la mano cabe en su zona con cualquier cantidad de cartas', () => {
-    const { self, handCard } = computeLayout(1280, 720)
-
-    for (const count of [0, 1, 5, 10]) {
-      const slots = handSlots(self.hand, count, handCard)
-
-      expect(slots).toHaveLength(count)
-
-      for (const slot of slots) {
-        expect(slot.x).toBeGreaterThanOrEqual(self.hand.x)
-        expect(slot.x + slot.w).toBeLessThanOrEqual(self.hand.x + self.hand.w)
-      }
-    }
 
   })
 

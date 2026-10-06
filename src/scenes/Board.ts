@@ -8,7 +8,6 @@ import { CardZoom } from '../ui/CardZoom'
 import { cardText } from '../ui/cardText'
 import { DonArea } from '../ui/DonArea'
 import { GameController } from '../ui/GameController'
-import { HandView } from '../ui/HandView'
 import { center, computeLayout, contains } from '../ui/layout'
 import type { BoardLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
@@ -22,7 +21,7 @@ import type { PromptOption } from '../ui/PromptDialog'
 import { buildPrompt, describeAction } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
-import { COLORS } from '../ui/theme'
+import { COLORS, RADIUS, textStyle } from '../ui/theme'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
 
@@ -194,12 +193,13 @@ export class Board extends Phaser.Scene {
 
     const { button } = this.layout
     const middle     = center(button)
-    const box        = this.add.rectangle(middle.x, middle.y, button.w, button.h, 0x2e7d32).setStrokeStyle(2, 0xffffff)
-    const label      = this.add.text(middle.x, middle.y, 'End turn', { fontSize: `${Math.round(button.h * 0.5)}px`, color: '#ffffff' }).setOrigin(0.5)
+    const box        = this.add.graphics()
+    const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, 0xffffff, 0).setInteractive({ useHandCursor: true })
+    const label      = this.add.text(middle.x, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
 
-    box.setInteractive({ useHandCursor: true })
-    box.on('pointerup', () => this.send(pass))
-    this.layer.add([box, label])
+    box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
+    hit.on('pointerup', () => this.send(pass))
+    this.layer.add([box, label, hit])
 
   }
 
@@ -288,12 +288,12 @@ export class Board extends Phaser.Scene {
     if (!own) {
       const back = { w: this.layout.handCard.w * 0.8, h: this.layout.handCard.h * 0.8 }
 
-      this.layer.add(new FanView(this, side.hand, views, back, true))
+      this.layer.add(new FanView(this, side.hand, views, back, 'rival'))
 
       return
     }
 
-    const hand = new HandView(this, side.hand, views, this.layout.handCard)
+    const hand = new FanView(this, side.hand, views, this.layout.handCard, 'self')
 
     this.layer.add(hand)
 
@@ -417,7 +417,7 @@ export class Board extends Phaser.Scene {
 
   private showDialog(title: string, options: PromptOption[]) {
     this.dialog?.destroy()
-    this.dialog = new PromptDialog(this, this.layout.width / 2, this.layout.height / 2, title, options)
+    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options)
     this.add.existing(this.dialog)
 
   }
