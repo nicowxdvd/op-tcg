@@ -5,7 +5,7 @@ import { HAND_SORT_LABELS } from './handSort'
 import type { HandSort } from './handSort'
 import { drawIcon } from './icons'
 import { fanSlots } from './layout'
-import type { Rect, Size } from './layout'
+import type { FanSlot, Point, Rect, Size } from './layout'
 import { COLORS, DURATION, RADIUS, textStyle } from './theme'
 
 const LIFT = 1.3
@@ -17,11 +17,17 @@ export class FanView extends Phaser.GameObjects.Container {
 
   readonly sprites: CardSprite[]
 
+  private selected: CardSprite | null = null
+  private slots: FanSlot[]
+  private card: Size
+
   constructor(scene: Phaser.Scene, rect: Rect, cards: CardView[], card: Size, mode: FanMode, sort: HandSort = 'original', onSort: () => void = () => {}) {
     super(scene, 0, 0)
 
     const slots = fanSlots(rect, cards.length, card)
 
+    this.slots  = slots
+    this.card   = card
     this.sprites = slots.map((slot, i) => new CardSprite(scene, slot.x, slot.y, card, cards[i]).setAngle(slot.angle))
     this.add(this.sprites)
 
@@ -29,7 +35,7 @@ export class FanView extends Phaser.GameObjects.Container {
       const pitch = slots.length > 1 ? slots[1].x - slots[0].x : card.w
 
       this.sprites.forEach(sprite => sprite.hitWidth = pitch)
-      this.sprites.forEach((sprite, i) => this.lift(sprite, slots[i], card))
+      this.sprites.forEach(sprite => this.lift(sprite))
     }
 
     this.drawHeader(rect, cards.length, card, mode, sort, onSort)
@@ -37,23 +43,60 @@ export class FanView extends Phaser.GameObjects.Container {
   }
 
 
-  private lift(sprite: CardSprite, slot: { x: number; y: number; angle: number }, card: Size): void {
-    const index = this.sprites.indexOf(sprite)
-
-    sprite.on('pointerover', () => {
-      this.bringToTop(sprite)
-      this.fitHit(sprite, card.w, 1 / LIFT)
-      this.scene.tweens.killTweensOf(sprite)
-      this.scene.tweens.add({ targets: sprite, y: slot.y - card.h * 0.15, scale: LIFT, angle: 0, duration: DURATION.hover })
-
-    })
+  private lift(sprite: CardSprite): void {
+    sprite.on('pointerover', () => this.raise(sprite))
     sprite.on('pointerout', () => {
-      this.moveTo(sprite, index)
-      this.fitHit(sprite, card.w, 1)
-      this.scene.tweens.killTweensOf(sprite)
-      this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.hover })
+      if (sprite !== this.selected)
+        this.settle(sprite)
 
     })
+
+  }
+
+
+  select(sprite: CardSprite | null): void {
+    const previous = this.selected
+
+    this.selected = sprite
+
+    if (previous && previous !== sprite)
+      this.settle(previous)
+
+    if (sprite)
+      this.raise(sprite)
+
+  }
+
+
+  anchorOf(sprite: CardSprite): Point {
+    const slot = this.slots[this.sprites.indexOf(sprite)]
+
+    return { x: slot.x, y: slot.y - this.card.h * 0.15 - this.card.h * LIFT / 2 }
+
+  }
+
+
+  private raise(sprite: CardSprite): void {
+    const slot = this.slots[this.sprites.indexOf(sprite)]
+
+    sprite.setFocus(true)
+    this.bringToTop(sprite)
+    this.fitHit(sprite, this.card.w, 1 / LIFT)
+    this.scene.tweens.killTweensOf(sprite)
+    this.scene.tweens.add({ targets: sprite, y: slot.y - this.card.h * 0.15, scale: LIFT, angle: 0, duration: DURATION.hover })
+
+  }
+
+
+  private settle(sprite: CardSprite): void {
+    const index = this.sprites.indexOf(sprite)
+    const slot  = this.slots[index]
+
+    sprite.setFocus(false)
+    this.moveTo(sprite, index)
+    this.fitHit(sprite, this.card.w, 1)
+    this.scene.tweens.killTweensOf(sprite)
+    this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.hover })
 
   }
 
