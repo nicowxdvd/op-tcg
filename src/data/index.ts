@@ -25,6 +25,20 @@ export function loadDefs(): Record<string, CardDef> {
 }
 
 
+export interface DeckSummary {
+  id: string
+  name: string
+  leader: string
+
+}
+
+
+export function listDecks(): DeckSummary[] {
+  return Object.values(DECKS).map(({ id, name, leader }) => ({ id, name, leader }))
+
+}
+
+
 export function loadDeck(id: string): DeckConfig {
   const deck = DECKS[id]
 

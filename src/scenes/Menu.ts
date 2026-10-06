@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser'
-import { createMockController } from '../dev/mockGame'
 import { Button } from '../ui/Button'
 import { COLORS, textStyle } from '../ui/theme'
 import { pixelRatio } from '../ui/viewport'
@@ -62,9 +61,7 @@ export class Menu extends Phaser.Scene {
 
 
   private start(cpu: boolean) {
-    const controller = createMockController(Date.now(), { cpu: cpu ? undefined : null })
-
-    this.scene.start('Board', { controller, images: this.images, donImage: this.donImage })
+    this.scene.start('DeckSelect', { mode: cpu ? 'cpu' : 'hotseat', images: this.images, donImage: this.donImage })
 
   }
 
