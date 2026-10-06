@@ -6,6 +6,8 @@ import { fanSlots } from './layout'
 import type { Rect, Size } from './layout'
 import { COLORS, DURATION, RADIUS, textStyle } from './theme'
 
+const LIFT = 1.3
+
 export type FanMode = 'rival' | 'self'
 
 
@@ -21,8 +23,12 @@ export class FanView extends Phaser.GameObjects.Container {
     this.sprites = slots.map((slot, i) => new CardSprite(scene, slot.x, slot.y, card, cards[i]).setAngle(slot.angle))
     this.add(this.sprites)
 
-    if (mode === 'self')
+    if (mode === 'self') {
+      const pitch = slots.length > 1 ? slots[1].x - slots[0].x : card.w
+
+      this.sprites.forEach(sprite => sprite.hitWidth = pitch)
       this.sprites.forEach((sprite, i) => this.lift(sprite, slots[i], card))
+    }
 
     this.drawHeader(rect, cards.length, card, mode)
 
@@ -30,12 +36,34 @@ export class FanView extends Phaser.GameObjects.Container {
 
 
   private lift(sprite: CardSprite, slot: { x: number; y: number; angle: number }, card: Size): void {
+    const index = this.sprites.indexOf(sprite)
+
     sprite.on('pointerover', () => {
       this.bringToTop(sprite)
-      this.scene.tweens.add({ targets: sprite, y: slot.y - card.h * 0.3, scale: 1.3, angle: 0, duration: DURATION.quick })
+      this.fitHit(sprite, card.w, 1 / LIFT)
+      this.scene.tweens.killTweensOf(sprite)
+      this.scene.tweens.add({ targets: sprite, y: slot.y - card.h * 0.15, scale: LIFT, angle: 0, duration: DURATION.hover })
 
     })
-    sprite.on('pointerout', () => this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.quick }))
+    sprite.on('pointerout', () => {
+      this.moveTo(sprite, index)
+      this.fitHit(sprite, card.w, 1)
+      this.scene.tweens.killTweensOf(sprite)
+      this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.hover })
+
+    })
+
+  }
+
+
+  private fitHit(sprite: CardSprite, cardWidth: number, factor: number): void {
+    const area = sprite.input?.hitArea as Phaser.Geom.Rectangle | undefined
+
+    if (!area || !sprite.hitWidth)
+      return
+
+    area.width = sprite.hitWidth * factor
+    area.x     = (cardWidth - area.width) / 2
 
   }
 

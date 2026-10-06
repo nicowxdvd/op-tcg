@@ -22,6 +22,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
   readonly def: CardDef | null
   readonly instanceId: string | undefined
   readonly cardSize: Size
+  hitWidth: number | undefined
   private marker: Phaser.GameObjects.Graphics
 
   constructor(scene: Phaser.Scene, x: number, y: number, size: Size, view: CardView) {
@@ -93,7 +94,10 @@ export class CardSprite extends Phaser.GameObjects.Container {
 
 
   enableInput(): this {
-    this.setInteractive({ useHandCursor: true })
+    const { w, h } = this.cardSize
+    const width    = Math.min(this.hitWidth ?? w, w)
+
+    this.setInteractive({ hitArea: new Phaser.Geom.Rectangle((w - width) / 2, 0, width, h), hitAreaCallback: Phaser.Geom.Rectangle.Contains, useHandCursor: true })
 
     return this
 
