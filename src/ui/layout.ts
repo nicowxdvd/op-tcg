@@ -118,7 +118,7 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const cardW       = Math.min(panelH * 0.28 * CARD_RATIO, (boardW - 2 * pad) / CARD_UNITS)
   const card        = { w: cardW, h: cardW / CARD_RATIO }
   const handH       = Math.min(panelH * 0.30, (gutter - 2 * margin) * 0.5 / CARD_RATIO)
-  const handCard    = { w: handH * CARD_RATIO, h: handH }
+  const handCard    = { w: handH * CARD_RATIO * 0.92, h: handH * 0.92 }
   const selfPanel   = { x: boardX, y: height - margin - panelH, w: boardW, h: panelH }
   const zones       = selfZones(selfPanel, card, pad)
   const centerX     = boardX + boardW / 2
@@ -222,7 +222,7 @@ export function fanSlots(rect: Rect, count: number, card: Size): FanSlot[] {
     return []
 
   const mid      = (count - 1) / 2
-  const reach    = rect.w - card.w
+  const reach    = rect.w - card.w * 1.4
   const pitch    = count > 1 ? Math.min(card.w * 0.7, reach / (count - 1)) : 0
   const step     = count > 1 ? Math.min(6, 36 / (count - 1)) : 0
   const sag      = card.h * 0.012
