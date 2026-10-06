@@ -2,7 +2,9 @@ import * as Phaser from 'phaser'
 import { drawIcon } from './icons'
 import type { IconKind } from './icons'
 import type { Instruction } from './instructions'
-import type { BoardLayout, Rect } from './layout'
+import type { PhaseDescription } from '../learn/describePhase'
+import type { BoardLayout, LearnLayout, Rect } from './layout'
+import { LearnPanel } from './LearnPanel'
 import { COLORS, RADIUS, textStyle } from './theme'
 
 export interface SideData {
@@ -10,6 +12,9 @@ export interface SideData {
   banner: Instruction | null
   notice: string | null
   log: string[]
+  learn: LearnLayout
+  info: PhaseDescription | null
+  onToggleLearn: () => void
   onFullscreen: () => void
 
 }
@@ -23,7 +28,12 @@ export class SidePanel extends Phaser.GameObjects.Container {
     this.drawFullscreen(layout.fullscreen, data.onFullscreen)
     this.drawStatus(layout.status, data.header)
     this.drawBanner(layout.banner, data.notice ? { title: 'AVISO', text: data.notice } : data.banner)
-    this.drawLog(layout.log, data.log)
+    this.drawToggle(data.learn.toggle, data.info !== null, data.onToggleLearn)
+
+    if (data.learn.learn && data.info)
+      this.add(new LearnPanel(this.scene, data.learn.learn, data.info))
+
+    this.drawLog(data.learn.log, data.log)
     this.drawReport(layout.report)
 
   }
@@ -99,10 +109,31 @@ export class SidePanel extends Phaser.GameObjects.Container {
   }
 
 
+  private drawToggle(rect: Rect, on: boolean, run: () => void): void {
+    const font = Math.max(9, Math.round(rect.h * 0.5))
+
+    this.box(rect, on ? COLORS.crimsonDark : COLORS.buttonDark, 1, COLORS.zoneBorder)
+    this.add(this.scene.add.text(rect.x + rect.w / 2, rect.y + rect.h / 2, on ? 'Modo aprendizaje: sí' : 'Modo aprendizaje: no', textStyle(font, COLORS.white)).setOrigin(0.5))
+
+    const hit = this.scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
+
+    hit.on('pointerup', run)
+    this.add(hit)
+
+  }
+
+
   private drawLog(rect: Rect, lines: string[]): void {
     const font = Math.max(9, Math.round(rect.w * 0.05))
+    const text = this.scene.add.text(rect.x + 2, rect.y + 2, lines.join('\n'), { ...textStyle(font, COLORS.text, false), wordWrap: { width: rect.w - 4 }, lineSpacing: font * 0.5 })
+    let shown  = lines
 
-    this.add(this.scene.add.text(rect.x + 2, rect.y + 2, lines.join('\n'), { ...textStyle(font, COLORS.text, false), wordWrap: { width: rect.w - 4 }, lineSpacing: font * 0.5 }))
+    while (text.height > rect.h && shown.length > 1) {
+      shown = shown.slice(1)
+      text.setText(shown.join('\n'))
+    }
+
+    this.add(text)
 
   }
 

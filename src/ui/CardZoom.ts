@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser'
 import type { CardDef } from '../engine'
 import { CardSprite } from './CardSprite'
+import { KeywordTooltip } from './KeywordTooltip'
 import { CARD_RATIO } from './layout'
 import type { Rect } from './layout'
 import { COLORS, RADIUS, textStyle } from './theme'
@@ -40,7 +41,11 @@ export class CardZoom extends Phaser.GameObjects.Container {
     this.add(new CardSprite(this.scene, rect.x + picture.w / 2, rect.y + picture.h / 2, picture, { def, fullResolution: true }))
     this.add(this.scene.add.text(textX, rect.y + 6, def.name, { ...textStyle(Math.max(11, 16 * unit), COLORS.white), ...wrap }))
     this.add(this.scene.add.text(textX, rect.y + 52 * unit, stats, { ...textStyle(Math.max(9, 12 * unit), COLORS.statGold), ...wrap }))
-    this.add(this.scene.add.text(textX, rect.y + 90 * unit, this.textOf(def.id), { ...textStyle(Math.max(9, 12 * unit), COLORS.text, false), ...wrap }))
+
+    const tooltip = new KeywordTooltip(this.scene, { x: rect.x, y: rect.y + rect.h + 6, w: rect.w, h: rect.h })
+
+    tooltip.layoutText(this.textOf(def.id), textX, rect.y + 90 * unit, rect.w - picture.w - 16, Math.max(9, 12 * unit))
+    this.add(tooltip)
     this.setVisible(true)
 
   }
