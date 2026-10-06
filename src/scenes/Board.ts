@@ -18,6 +18,9 @@ import { center, computeLayout, contains, splitLearn } from '../ui/layout'
 import type { BoardLayout, LearnLayout, SideLayout } from '../ui/layout'
 import { LifeArea } from '../ui/LifeArea'
 import { FanView } from '../ui/FanView'
+import { HandActionDialog } from '../ui/HandActionDialog'
+import { handActionsFor } from '../ui/handActions'
+import type { HandAction, HandSelection } from '../ui/handActions'
 import { nextHandSort, sortHand } from '../ui/handSort'
 import type { HandSort } from '../ui/handSort'
 import { instructionFor, phaseLabel } from '../ui/instructions'
@@ -30,7 +33,7 @@ import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { collectSprites, playEvents } from '../ui/animations'
-import { buildPrompt, describeAction } from '../ui/prompts'
+import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
 import { fadeIn, goTo } from '../ui/transitions'
@@ -47,6 +50,7 @@ const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
 const ACTIVATE  = COLORS.activate
 const NOTICE_MS = 3000
+const CLICK_DISTANCE = 6
 const RESULT_MS = 1800
 
 const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0 }
@@ -59,6 +63,10 @@ export class Board extends Phaser.Scene {
   private layer!: Phaser.GameObjects.Container
   private zoom!: CardZoom
   private dialog: PromptDialog | null = null
+  private handDialog: HandActionDialog | null = null
+  private selection: HandSelection | null = null
+  private hand: FanView | null = null
+  private counterOpen = false
   private notice: string | null = null
   private dirty = true
   private viewer: PlayerId = 'p1'
@@ -146,7 +154,11 @@ export class Board extends Phaser.Scene {
       if (pointer.leftButtonDown() && this.zoom.pinned)
         this.zoom.hide()
 
+      if (this.handDialog && !this.handDialog.contains(pointer.worldX, pointer.worldY))
+        this.closeHandDialog()
+
     })
+    this.input.keyboard?.on('keydown-ESC', () => this.closeHandDialog())
 
   }
 
@@ -176,6 +188,10 @@ export class Board extends Phaser.Scene {
     this.zoom?.destroy()
     this.dialog?.destroy()
     this.dialog = null
+    this.handDialog?.destroy()
+    this.handDialog = null
+    this.selection  = null
+    this.hand       = null
     this.sources.clear()
 
     const actor = this.controller.actor()
@@ -183,6 +199,9 @@ export class Board extends Phaser.Scene {
     this.viewer = this.controller.isCpu(actor) ? opponentOf(actor) : actor
     this.legal  = this.controller.getLegal(this.viewer)
     this.layer  = this.add.container(0, 0)
+
+    if (!this.inCounterStep())
+      this.counterOpen = false
 
     const { layout } = this
     const rival      = opponentOf(this.viewer)
@@ -201,6 +220,8 @@ export class Board extends Phaser.Scene {
 
     if (prompt)
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
+    else if (this.inCounterStep())
+      this.showCounterPrompt()
 
     const events = this.queued
 
@@ -369,6 +390,7 @@ export class Board extends Phaser.Scene {
   private drawHand(side: SideLayout, data: PlayerState, own: boolean) {
     const state    = this.controller.getState()
     const playable = new Set(this.legal.flatMap(action => action.type === 'PlayCharacter' || action.type === 'PlayEvent' || action.type === 'PlayStage' ? [action.instanceId] : []))
+    const counters = new Set(this.counterOpen ? this.legal.flatMap(action => action.type === 'UseCounter' || action.type === 'UseCounterEvent' ? [action.instanceId] : []) : [])
     const views    = data.hand.map((instance): CardView => ({ def: own ? state.defs[instance.defId] : null, instanceId: instance.instanceId }))
 
     if (!own) {
@@ -382,6 +404,7 @@ export class Board extends Phaser.Scene {
     const hand = new FanView(this, side.hand, sortHand(views, this.handSort), this.layout.handCard, 'self', this.handSort, () => this.cycleHandSort())
 
     this.layer.add(hand)
+    this.hand = hand
 
     for (const sprite of hand.sprites) {
       this.wireZoom(sprite)
@@ -391,10 +414,83 @@ export class Board extends Phaser.Scene {
         this.input.setDraggable(sprite)
         this.sources.set(sprite, { kind: 'hand', id: sprite.instanceId })
       }
+      else if (sprite.instanceId && counters.has(sprite.instanceId)) {
+        sprite.setHighlight(PLAYABLE).enableInput()
+      }
       else {
         sprite.enableInput()
       }
+
+      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => this.pick(hand, sprite, pointer))
     }
+
+  }
+
+
+  private inCounterStep(): boolean {
+    const battle = this.controller.getState().battle
+
+    return battle?.step === 'counter' && battle.attackerPlayer !== this.viewer
+
+  }
+
+
+  private showCounterPrompt() {
+    const pass        = this.legal.find(action => action.type === 'PassCounter')
+    const hasCounters = this.legal.some(action => action.type === 'UseCounter' || action.type === 'UseCounterEvent')
+
+    if (!pass)
+      return
+
+    if (this.counterOpen)
+      this.showDialog('Fase counter: elegí una carta con counter', [{ label: 'No usar counter', run: () => this.send(pass) }], false)
+    else if (hasCounters)
+      this.showDialog('Fase counter: ¿usar counter?', [{ label: 'Sí', run: () => this.openCounters() }, { label: 'No', run: () => this.send(pass) }], false)
+    else
+      this.showDialog('Fase counter: no tenés cartas con counter', [{ label: 'Continuar', run: () => this.send(pass) }], false)
+
+  }
+
+
+  private openCounters() {
+    this.counterOpen = true
+    this.dirty       = true
+
+  }
+
+
+  private pick(hand: FanView, sprite: CardSprite, pointer: Phaser.Input.Pointer) {
+    if (!sprite.instanceId || !pointer.leftButtonReleased() || pointer.getDistance() > CLICK_DISTANCE)
+      return
+
+    const actions = handActionsFor(this.controller.getState(), this.legal, sprite.instanceId)
+
+    if (actions.length === 0 || (this.inCounterStep() && !this.counterOpen))
+      return
+
+    this.handDialog?.destroy()
+    this.selection  = { instanceId: sprite.instanceId, actions }
+    this.handDialog = new HandActionDialog(this, { w: this.layout.width, h: this.layout.height }, hand.anchorOf(sprite), nameOf(this.controller.getState(), sprite.instanceId), actions, {
+      run:   (action: HandAction) => this.send(action.action),
+      close: () => this.closeHandDialog(),
+      info:  () => {
+        if (sprite.def) {
+          this.zoom.show(sprite.def)
+          this.zoom.pinned = true
+        }
+      }
+    })
+    this.add.existing(this.handDialog)
+    hand.select(sprite)
+
+  }
+
+
+  private closeHandDialog() {
+    this.handDialog?.destroy()
+    this.handDialog = null
+    this.selection  = null
+    this.hand?.select(null)
 
   }
 
@@ -508,9 +604,9 @@ export class Board extends Phaser.Scene {
   }
 
 
-  private showDialog(title: string, options: PromptOption[]) {
+  private showDialog(title: string, options: PromptOption[], veiled = true) {
     this.dialog?.destroy()
-    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options)
+    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options, veiled)
     this.add.existing(this.dialog)
 
   }
@@ -525,6 +621,7 @@ export class Board extends Phaser.Scene {
 
   private send(action: Action) {
     this.closeDialog()
+    this.closeHandDialog()
 
     try {
       this.controller.dispatch(action)

@@ -1,6 +1,6 @@
 # SPEC 12 — Mano grande, selección con contorno morado y modal de acción sobre la carta
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 06, SPEC 11
 > **Fecha:** 2026-10-06
 > **Objetivo:** Agrandar la mano local para que se superponga levemente al tablero, marcar la carta bajo el mouse con un contorno morado fosforescente y, al hacer click en una carta con acción legal, mostrar un modal pequeño sobre la mano, con una colita hacia la carta, para jugarla o usarla como counter.
@@ -38,13 +38,13 @@ La referencia visual es `~/Desktop/op.png`. De ahí salen la posición de la man
   - Se cierra con ✕, `Esc`, click fuera del modal o al ejecutar la acción. Al cerrarse se quita la selección.
 - **Qué acción ofrece.** Se calcula desde `legal`:
   - Turno propio: `PlayCharacter`, `PlayEvent`, `PlayStage` de esa carta, mostrados como `Jugar`.
-  - Paso `counter` de un ataque rival: `UseCounter` y `UseCounterEvent` de esa carta, mostrados como `Counter`.
+  - Paso `counter` de un ataque rival: `UseCounter` y `UseCounterEvent` de esa carta, mostrados como `Counter`. El diálogo grande que listaba los counters se elimina: en su lugar aparece un mensaje pequeño y sin velo, `Fase counter: ¿usar counter?`, con `Sí` y `No`. `No` ejecuta `PassCounter`. `Sí` habilita elegir la carta en la mano con el modal de acción, y deja un botón `No usar counter` (`PassCounter`). Si no hay counters legales, el mensaje solo ofrece continuar. El mensaje se repite tras cada counter usado.
   - Si la carta tiene más de una acción legal (por ejemplo `PlayCharacter` con distintos `replaceId`), el modal muestra un botón por acción con el texto de `describeAction` en lugar de ✓, más ✕.
 - **Convivencia con lo existente.** El arrastre de cartas jugables sigue funcionando. El diálogo centrado de `PromptDialog` (mulligan, elecciones pendientes, bloqueo, trigger) no cambia.
 
 **Fuera de alcance (para otras specs):**
 
-- Cambios al diálogo centrado `PromptDialog` y a `buildPrompt`.
+- Cambios al diálogo centrado `PromptDialog` y a `buildPrompt` fuera del paso `counter`.
 - Mostrar acciones ilegales o botones deshabilitados.
 - Modal para cartas fuera de la mano (Characters, Leader, efectos `ActivateEffect`).
 - Cambios al motor, a las acciones o a la IA.
@@ -91,21 +91,21 @@ export interface HandSelection {
 
 ## Criterios de aceptación
 
-- [ ] A 1280x720 la altura de `handCard` es al menos 1,3 veces la de SPEC 11.
-- [ ] El rectángulo de la mano se superpone al panel de mesa propio y no cubre Life, Leader, Stage, Deck, Character Area ni Cost Area en las cuatro resoluciones de `layout.test.ts`.
-- [ ] Pasar el mouse sobre cualquier carta de la mano dibuja un contorno `COLORS.neon` y lo quita al salir.
-- [ ] Click en una carta jugable en mi turno abre el modal con el título `¿Jugar <nombre>?`.
-- [ ] Click en ✓ ejecuta `PlayCharacter`, `PlayEvent` o `PlayStage` y la carta sale de la mano.
-- [ ] En el paso `counter` de un ataque rival, click en una carta con counter abre `¿Counter con <nombre>?` y ✓ ejecuta `UseCounter` o `UseCounterEvent`.
-- [ ] Click en una carta de la mano sin acción legal no abre modal.
-- [ ] El modal aparece arriba de la carta seleccionada, con la colita apuntando a ella, y queda dentro de la pantalla a 1024x600 y 2560x1440.
-- [ ] ✕, `Esc` y click fuera cierran el modal y quitan la selección.
-- [ ] Click en otra carta jugable mueve el modal a esa carta.
-- [ ] El ícono `i` abre el zoom de la carta.
-- [ ] Una carta con varias acciones legales muestra un botón por acción más ✕.
-- [ ] Arrastrar una carta jugable al tablero sigue jugándola y no abre el modal.
-- [ ] El diálogo centrado de mulligan, elección, bloqueo y trigger se ve igual que en SPEC 11.
-- [ ] `handActions.test.ts` y `layout.test.ts` pasan, y no hay errores en la consola del navegador.
+- [x] A 1280x720 la altura de `handCard` es al menos 1,3 veces la de SPEC 11.
+- [x] El rectángulo de la mano se superpone al panel de mesa propio y no cubre Life, Leader, Stage, Deck, Character Area ni Cost Area en las cuatro resoluciones de `layout.test.ts`.
+- [x] Pasar el mouse sobre cualquier carta de la mano dibuja un contorno `COLORS.neon` y lo quita al salir.
+- [x] Click en una carta jugable en mi turno abre el modal con el título `¿Jugar <nombre>?`.
+- [x] Click en ✓ ejecuta `PlayCharacter`, `PlayEvent` o `PlayStage` y la carta sale de la mano.
+- [x] En el paso `counter` de un ataque rival, click en una carta con counter abre `¿Counter con <nombre>?` y ✓ ejecuta `UseCounter` o `UseCounterEvent`.
+- [x] Click en una carta de la mano sin acción legal no abre modal.
+- [x] El modal aparece arriba de la carta seleccionada, con la colita apuntando a ella, y queda dentro de la pantalla a 1024x600 y 2560x1440.
+- [x] ✕, `Esc` y click fuera cierran el modal y quitan la selección.
+- [x] Click en otra carta jugable mueve el modal a esa carta.
+- [x] El ícono `i` abre el zoom de la carta.
+- [x] Una carta con varias acciones legales muestra un botón por acción más ✕.
+- [x] Arrastrar una carta jugable al tablero sigue jugándola y no abre el modal.
+- [x] El diálogo centrado de mulligan, elección, bloqueo y trigger se ve igual que en SPEC 11.
+- [x] `handActions.test.ts` y `layout.test.ts` pasan, y no hay errores en la consola del navegador.
 
 ---
 

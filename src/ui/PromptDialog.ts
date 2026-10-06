@@ -11,7 +11,7 @@ export interface PromptOption {
 
 export class PromptDialog extends Phaser.GameObjects.Container {
 
-  constructor(scene: Phaser.Scene, screen: Size, title: string, options: PromptOption[]) {
+  constructor(scene: Phaser.Scene, screen: Size, title: string, options: PromptOption[], veiled = true) {
     super(scene, screen.w / 2, screen.h / 2)
 
     const unit       = Math.max(0.8, screen.h / 720)
@@ -24,7 +24,11 @@ export class PromptDialog extends Phaser.GameObjects.Container {
     const buttonsH   = side ? row : options.length * row + (options.length - 1) * gap
     const height     = pad * 2 + titleText.height + gap * 1.5 + buttonsH
     const top        = -height / 2
-    const veil       = scene.add.rectangle(0, 0, screen.w, screen.h, COLORS.veil, 0.55).setInteractive()
+    const veil       = scene.add.rectangle(0, 0, screen.w, screen.h, COLORS.veil, veiled ? 0.55 : 0)
+
+    if (veiled)
+      veil.setInteractive()
+
     const panel      = scene.add.graphics()
 
     panel.fillStyle(COLORS.dialog, 0.97).fillRoundedRect(-width / 2, top, width, height, RADIUS.panel)

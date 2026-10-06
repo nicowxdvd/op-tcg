@@ -53,14 +53,11 @@ describe('buildPrompt', () => {
 
   })
 
-  it('offers Counter and No counter at the counter step', () => {
+  it('returns null at the counter step, which the hand handles', () => {
     const { state, defender } = attacked()
     const counter             = apply(state, { type: 'PassBlock', player: defender }).state
-    const prompt              = buildPrompt(counter, getLegalActions(counter, defender), defender)
 
-    expect(prompt?.title).toContain('Counter step')
-    expect(prompt?.options.map(option => option.label)).toContain('No counter')
-    expect(prompt?.options.some(option => option.label.startsWith('Counter:'))).toBe(true)
+    expect(buildPrompt(counter, getLegalActions(counter, defender), defender)).toBeNull()
 
   })
 

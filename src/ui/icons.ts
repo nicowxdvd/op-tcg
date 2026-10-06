@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import { COLORS } from './theme'
 
-export type IconKind = 'fullscreen' | 'sound' | 'moon' | 'gear' | 'bug' | 'minus' | 'order'
+export type IconKind = 'fullscreen' | 'sound' | 'moon' | 'gear' | 'bug' | 'minus' | 'order' | 'check' | 'close' | 'info'
 
 
 export function drawIcon(graphics: Phaser.GameObjects.Graphics, kind: IconKind, cx: number, cy: number, size: number, color: number = COLORS.text): void {
@@ -56,6 +56,21 @@ export function drawIcon(graphics: Phaser.GameObjects.Graphics, kind: IconKind, 
       graphics.lineBetween(cx - r * 0.4, cy + r * 0.6, cx - r * 0.7, cy + r * 0.3)
       graphics.lineBetween(cx + r * 0.4, cy + r * 0.6, cx + r * 0.4, cy - r * 0.6)
       graphics.lineBetween(cx + r * 0.4, cy - r * 0.6, cx + r * 0.7, cy - r * 0.3)
+
+      break
+    case 'check':
+      graphics.strokePoints([[-0.6, 0.05], [-0.2, 0.45], [0.65, -0.45]].map(([px, py]) => new Phaser.Math.Vector2(cx + r * px, cy + r * py)), false)
+
+      break
+    case 'close':
+      graphics.lineBetween(cx - r * 0.5, cy - r * 0.5, cx + r * 0.5, cy + r * 0.5)
+      graphics.lineBetween(cx + r * 0.5, cy - r * 0.5, cx - r * 0.5, cy + r * 0.5)
+
+      break
+    case 'info':
+      graphics.strokeCircle(cx, cy, r * 0.8)
+      graphics.lineBetween(cx, cy - r * 0.05, cx, cy + r * 0.4)
+      graphics.fillStyle(color, 1).fillCircle(cx, cy - r * 0.35, Math.max(1.2, size * 0.06))
 
       break
   }

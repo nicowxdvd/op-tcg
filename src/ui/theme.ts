@@ -23,6 +23,7 @@ export const COLORS = {
   cardBorder:   0x0a0a0a,
   shadow:       0x000000,
   playable:     0x5ec8ff,
+  neon:         0xb026ff,
   attack:       0xff5a47,
   activate:     0x5ec8ff,
   rest:         0x1b2b4d,
