@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allRects, computeLayout, contains, donSlots, handSlots, overlaps } from '../../src/ui/layout'
+import { allRects, computeLayout, contains, donSlots, fanSlots, handSlots, overlaps } from '../../src/ui/layout'
 
 const SIZES = [[1024, 600], [1280, 720], [1920, 1080], [2560, 1440], [2560, 1080]] as const
 
@@ -116,6 +116,28 @@ describe('layout', () => {
 
     for (const point of donSlots(self.don, 10)) {
       expect(contains(self.don, point.x, point.y)).toBe(true)
+    }
+
+  })
+
+
+  it('el abanico queda centrado y simétrico con cualquier cantidad', () => {
+    const { rival, handCard } = computeLayout(1280, 720)
+
+    for (const count of [0, 1, 5, 10]) {
+      const slots = fanSlots(rival.hand, count, handCard)
+
+      expect(slots).toHaveLength(count)
+
+      if (count > 1) {
+        expect(slots[0].angle).toBeCloseTo(-slots[count - 1].angle)
+        expect(slots[0].x + slots[count - 1].x).toBeCloseTo(2 * (rival.hand.x + rival.hand.w / 2))
+      }
+
+      for (const slot of slots) {
+        expect(slot.x - handCard.w / 2).toBeGreaterThanOrEqual(rival.hand.x - 0.001)
+        expect(slot.x + handCard.w / 2).toBeLessThanOrEqual(rival.hand.x + rival.hand.w + 0.001)
+      }
     }
 
   })

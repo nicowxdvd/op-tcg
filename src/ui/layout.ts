@@ -126,7 +126,7 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const rivalPanel  = turn(selfPanel)
   const self: SideLayout  = { panel: selfPanel, badge: { x: cx + margin, y: selfBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: selfBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: cx + margin, y: height - margin - handH, w: gutter - 2 * margin, h: handH }, ...zones }
   const rival: SideLayout = { panel: rivalPanel, badge: { x: cx + margin, y: rivalBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: rivalBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: sideX, y: margin, w: sideW, h: handH }, life: turn(zones.life), leader: turn(zones.leader), stage: turn(zones.stage), don: turn(zones.don), donDeck: turn(zones.donDeck), deck: turn(zones.deck), trash: turn(zones.trash), characters: turn(zones.characters), slots: zones.slots.map(turn).reverse() }
-  const status      = { x: sideX, y: margin + handH + margin, w: sideW, h: height * 0.07 }
+  const status      = { x: sideX, y: margin + handH + margin, w: sideW, h: height * 0.095 }
   const banner      = { x: sideX, y: status.y + status.h + margin, w: sideW, h: height * 0.12 }
   const report      = { x: sideX, y: height - margin - height * 0.05, w: sideW, h: height * 0.05 }
   const button      = { x: sideX, y: report.y - margin - height * 0.055, w: sideW, h: height * 0.055 }
@@ -197,5 +197,30 @@ export function donSlots(rect: Rect, count: number): Point[] {
   const pitch = Math.min(card.w * 1.15, (rect.w - card.w - 2 * pad) / 9)
 
   return Array.from({ length: count }, (_, i): Point => ({ x: rect.x + pad + card.w / 2 + i * pitch, y: rect.y + pad + card.h / 2 }))
+
+}
+
+
+export interface FanSlot {
+  x: number
+  y: number
+  angle: number
+
+}
+
+
+export function fanSlots(rect: Rect, count: number, card: Size): FanSlot[] {
+  if (count === 0)
+    return []
+
+  const mid      = (count - 1) / 2
+  const reach    = rect.w - card.w
+  const pitch    = count > 1 ? Math.min(card.w * 0.7, reach / (count - 1)) : 0
+  const step     = count > 1 ? Math.min(6, 36 / (count - 1)) : 0
+  const sag      = card.h * 0.012
+  const baseline = rect.y + card.h / 2 + card.h * 0.04
+  const centerX  = rect.x + rect.w / 2
+
+  return Array.from({ length: count }, (_, i): FanSlot => ({ x: centerX + (i - mid) * pitch, y: baseline + (i - mid) ** 2 * sag, angle: (i - mid) * step }))
 
 }
