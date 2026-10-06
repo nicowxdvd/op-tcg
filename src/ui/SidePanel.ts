@@ -55,7 +55,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
     this.box(rect, COLORS.zoneFill, 1, COLORS.zoneBorder)
     this.icon('fullscreen', rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w * 0.5)
 
-    const hit = this.scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0xffffff, 0).setInteractive({ useHandCursor: true })
+    const hit = this.scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
 
     hit.on('pointerup', run)
     this.add(hit)

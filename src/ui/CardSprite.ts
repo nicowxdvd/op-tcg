@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import type { CardDef } from '../engine'
 import type { Size } from './layout'
-import { COLORS, RADIUS, SHADOW, textStyle } from './theme'
+import { CARD_FACES, COLORS, cssAlpha, RADIUS, SHADOW, textStyle } from './theme'
 import { BACK_KEY, bestTextureKey, DON_KEY, hasCardImage, hasDonImage } from './textures'
 
 export interface CardView {
@@ -15,8 +15,6 @@ export interface CardView {
   fullResolution?: boolean
 
 }
-
-const FACES: Record<string, number> = { Red: 0xc0392b, Green: 0x27ae60, Blue: 0x2980b9, Purple: 0x8e44ad, Black: 0x2c3e50, Yellow: 0xd4ac0d }
 
 
 export class CardSprite extends Phaser.GameObjects.Container {
@@ -94,7 +92,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
   private drawFallback(def: CardDef | null): void {
     const { w, h } = this.cardSize
     const font     = Math.max(8, Math.round(h * 0.085))
-    const fill     = def ? FACES[def.colors[0]] ?? COLORS.buttonDark : COLORS.cardBack
+    const fill     = def ? CARD_FACES[def.colors[0]] ?? COLORS.buttonDark : COLORS.cardBack
     const face     = this.scene.add.graphics()
 
     face.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, RADIUS.card)
@@ -118,10 +116,10 @@ export class CardSprite extends Phaser.GameObjects.Container {
     const power    = view.power ?? view.def!.power
 
     if (power > 0)
-      this.add(this.scene.add.text(0, h / 2 - 3, String(power), { ...textStyle(font + 1), backgroundColor: '#000000a0', padding: { x: 3, y: 1 } }).setOrigin(0.5, 1))
+      this.add(this.scene.add.text(0, h / 2 - 3, String(power), { ...textStyle(font + 1), backgroundColor: cssAlpha(COLORS.shadow, 0.63), padding: { x: 3, y: 1 } }).setOrigin(0.5, 1))
 
     if (view.don)
-      this.add(this.scene.add.text(w / 2 - 3, -h / 2 + 3, `+${view.don}`, { ...textStyle(font, COLORS.cardBorder), backgroundColor: '#f6c026', padding: { x: 3, y: 1 } }).setOrigin(1, 0))
+      this.add(this.scene.add.text(w / 2 - 3, -h / 2 + 3, `+${view.don}`, { ...textStyle(font, COLORS.cardBorder), backgroundColor: cssAlpha(COLORS.gold, 1), padding: { x: 3, y: 1 } }).setOrigin(1, 0))
 
   }
 
@@ -130,7 +128,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
     const { w, h } = this.cardSize
     const font     = Math.max(9, Math.round(h * 0.11))
 
-    this.add(this.scene.add.text(w / 2 - 4, h / 2 - 3, String(count), { ...textStyle(font), backgroundColor: '#000000cc', padding: { x: 5, y: 1 } }).setOrigin(1, 1))
+    this.add(this.scene.add.text(w / 2 - 4, h / 2 - 3, String(count), { ...textStyle(font), backgroundColor: cssAlpha(COLORS.shadow, 0.8), padding: { x: 5, y: 1 } }).setOrigin(1, 1))
 
   }
 

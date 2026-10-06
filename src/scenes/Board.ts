@@ -194,7 +194,7 @@ export class Board extends Phaser.Scene {
     const { button } = this.layout
     const middle     = center(button)
     const box        = this.add.graphics()
-    const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, 0xffffff, 0).setInteractive({ useHandCursor: true })
+    const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
     const label      = this.add.text(middle.x, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
 
     box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)

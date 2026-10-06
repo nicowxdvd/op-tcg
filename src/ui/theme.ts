@@ -25,8 +25,13 @@ export const COLORS = {
   playable:     0x5ec8ff,
   attack:       0xff5a47,
   activate:     0x5ec8ff,
-  rest:         0x1b2b4d
+  rest:         0x1b2b4d,
+  indicatorRival: 0x3b82f6,
+  indicatorSelf:  0xcbd5e1,
+  statGold:     0xffe082
 } as const
+
+export const CARD_FACES: Record<string, number> = { Red: 0xc0392b, Green: 0x27ae60, Blue: 0x2980b9, Purple: 0x8e44ad, Black: 0x2c3e50, Yellow: 0xd4ac0d }
 
 export const FONT     = { family: '"Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif', weight: 'bold' } as const
 export const RADIUS   = { card: 6, zone: 8, panel: 14, pill: 10, button: 8 } as const
@@ -39,6 +44,12 @@ export const MAX_DPR  = 2
 
 export function css(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`
+
+}
+
+
+export function cssAlpha(color: number, alpha: number): string {
+  return `${css(color)}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
 
 }
 

@@ -41,7 +41,7 @@ export class PromptDialog extends Phaser.GameObjects.Container {
       const x       = side ? -width / 2 + pad + i * (buttonW + gap) + buttonW / 2 : 0
       const y       = side ? startY + row / 2 : startY + i * (row + gap) + row / 2
       const button  = scene.add.graphics()
-      const hit     = scene.add.rectangle(x, y, buttonW, row, 0xffffff, 0).setInteractive({ useHandCursor: true })
+      const hit     = scene.add.rectangle(x, y, buttonW, row, COLORS.white, 0).setInteractive({ useHandCursor: true })
       const draw    = (alpha: number) => button.clear().fillStyle(fill, alpha).fillRoundedRect(x - buttonW / 2, y - row / 2, buttonW, row, RADIUS.button)
 
       draw(1)

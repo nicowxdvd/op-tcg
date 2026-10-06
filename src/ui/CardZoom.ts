@@ -3,6 +3,7 @@ import type { CardDef } from '../engine'
 import { CardSprite } from './CardSprite'
 import { CARD_RATIO } from './layout'
 import type { Rect } from './layout'
+import { COLORS, RADIUS, textStyle } from './theme'
 
 
 export class CardZoom extends Phaser.GameObjects.Container {
@@ -28,12 +29,18 @@ export class CardZoom extends Phaser.GameObjects.Container {
     const textX    = rect.x + picture.w + 10
     const stats    = [def.type, ...(def.type === 'Leader' ? [`Life ${def.life}`] : [`Cost ${def.cost}`]), ...(def.power ? [`Power ${def.power}`] : []), ...(def.counter ? [`Counter +${def.counter}`] : [])].join('  |  ')
 
+    const wrap = { wordWrap: { width: rect.w - picture.w - 16 } }
+    const unit = rect.h / 200
+    const back = this.scene.add.graphics()
+
+    back.fillStyle(COLORS.shadow, 0.75).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.panel)
+
     this.removeAll(true)
-    this.add(this.scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x000000, 0.75))
+    this.add(back)
     this.add(new CardSprite(this.scene, rect.x + picture.w / 2, rect.y + picture.h / 2, picture, { def, fullResolution: true }))
-    this.add(this.scene.add.text(textX, rect.y + 6, def.name, { fontSize: '16px', color: '#ffffff', fontStyle: 'bold', wordWrap: { width: rect.w - picture.w - 16 } }))
-    this.add(this.scene.add.text(textX, rect.y + 52, stats, { fontSize: '12px', color: '#ffe082', wordWrap: { width: rect.w - picture.w - 16 } }))
-    this.add(this.scene.add.text(textX, rect.y + 90, this.textOf(def.id), { fontSize: '12px', color: '#e8e8e8', wordWrap: { width: rect.w - picture.w - 16 } }))
+    this.add(this.scene.add.text(textX, rect.y + 6, def.name, { ...textStyle(Math.max(11, 16 * unit), COLORS.white), ...wrap }))
+    this.add(this.scene.add.text(textX, rect.y + 52 * unit, stats, { ...textStyle(Math.max(9, 12 * unit), COLORS.statGold), ...wrap }))
+    this.add(this.scene.add.text(textX, rect.y + 90 * unit, this.textOf(def.id), { ...textStyle(Math.max(9, 12 * unit), COLORS.text, false), ...wrap }))
     this.setVisible(true)
 
   }
