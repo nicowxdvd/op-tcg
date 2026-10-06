@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser'
 import type { CardDef } from '../engine'
 import type { Size } from './layout'
-import { cardTextureKey, hasCardImage } from './textures'
+import { CARD_FACES, COLORS, cssAlpha, DURATION, RADIUS, SHADOW, textStyle } from './theme'
+import { BACK_KEY, bestTextureKey, DON_KEY, hasCardImage, hasDonImage } from './textures'
 
 export interface CardView {
   def: CardDef | null
@@ -9,11 +10,11 @@ export interface CardView {
   rested?: boolean
   power?: number
   don?: number
+  count?: number
+  donFace?: boolean
+  fullResolution?: boolean
 
 }
-
-const COLORS: Record<string, number> = { Red: 0xc0392b, Green: 0x27ae60, Blue: 0x2980b9, Purple: 0x8e44ad, Black: 0x2c3e50, Yellow: 0xd4ac0d }
-const BACK_COLOR                    = 0x1f3a5f
 
 
 export class CardSprite extends Phaser.GameObjects.Container {
@@ -21,7 +22,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
   readonly def: CardDef | null
   readonly instanceId: string | undefined
   readonly cardSize: Size
-  private marker: Phaser.GameObjects.Rectangle
+  private marker: Phaser.GameObjects.Graphics
 
   constructor(scene: Phaser.Scene, x: number, y: number, size: Size, view: CardView) {
     super(scene, x, y)
@@ -31,15 +32,32 @@ export class CardSprite extends Phaser.GameObjects.Container {
     this.cardSize   = size
     this.setSize(size.w, size.h)
 
+    const shadow = scene.add.graphics()
+
+    shadow.fillStyle(COLORS.shadow, SHADOW.alpha).fillRoundedRect(-size.w / 2 + SHADOW.offset, -size.h / 2 + SHADOW.offset, size.w, size.h, RADIUS.card)
+    this.add(shadow)
+
     if (view.def && hasCardImage(scene, view.def.id))
-      this.add(scene.add.image(0, 0, cardTextureKey(view.def.id)).setDisplaySize(size.w, size.h))
+      this.add(scene.add.image(0, 0, bestTextureKey(scene, view.def.id, view.fullResolution ? Infinity : size.h)).setDisplaySize(size.w, size.h))
+    else if (view.donFace && hasDonImage(scene))
+      this.add(scene.add.image(0, 0, DON_KEY).setDisplaySize(size.w, size.h))
+    else if (!view.def && scene.textures.exists(BACK_KEY))
+      this.add(scene.add.image(0, 0, BACK_KEY).setDisplaySize(size.w, size.h))
     else
       this.drawFallback(view.def)
+
+    const border = scene.add.graphics()
+
+    border.lineStyle(2, COLORS.cardBorder, 1).strokeRoundedRect(-size.w / 2, -size.h / 2, size.w, size.h, RADIUS.card)
+    this.add(border)
 
     if (view.def)
       this.drawBadges(view)
 
-    this.marker = scene.add.rectangle(0, 0, size.w + 6, size.h + 6).setStrokeStyle(4, 0xffd54a).setVisible(false)
+    if (view.count !== undefined)
+      this.drawCount(view.count)
+
+    this.marker = scene.add.graphics().setVisible(false)
     this.add(this.marker)
 
     if (view.rested)
@@ -49,12 +67,27 @@ export class CardSprite extends Phaser.GameObjects.Container {
 
 
   setHighlight(color: number | null): this {
-    this.marker.setVisible(color !== null)
+    this.marker.clear().setVisible(color !== null)
 
-    if (color !== null)
-      this.marker.setStrokeStyle(4, color)
+    if (color !== null) {
+      const { w, h } = this.cardSize
+
+      this.marker.lineStyle(4, color, 1).strokeRoundedRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, RADIUS.card + 2)
+
+    }
 
     return this
+
+  }
+
+
+  flash(color: number): void {
+    const { w, h } = this.cardSize
+    const overlay  = this.scene.add.graphics()
+
+    overlay.fillStyle(color, 0.6).fillRoundedRect(-w / 2, -h / 2, w, h, RADIUS.card)
+    this.add(overlay)
+    this.scene.tweens.add({ targets: overlay, alpha: 0, duration: DURATION.move, onComplete: () => overlay.destroy() })
 
   }
 
@@ -70,23 +103,20 @@ export class CardSprite extends Phaser.GameObjects.Container {
   private drawFallback(def: CardDef | null): void {
     const { w, h } = this.cardSize
     const font     = Math.max(8, Math.round(h * 0.085))
-    const fill     = def ? COLORS[def.colors[0]] ?? 0x555555 : BACK_COLOR
+    const fill     = def ? CARD_FACES[def.colors[0]] ?? COLORS.buttonDark : COLORS.cardBack
+    const face     = this.scene.add.graphics()
 
-    this.add(this.scene.add.rectangle(0, 0, w, h, fill).setStrokeStyle(2, 0xffffff))
+    face.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, RADIUS.card)
+    this.add(face)
 
-    if (!def) {
-      this.add(this.scene.add.text(0, 0, 'OP', { fontSize: `${font * 2}px`, color: '#9fb6d6' }).setOrigin(0.5))
-
+    if (!def)
       return
 
-    }
-
-    this.add(this.scene.add.rectangle(0, 0, w - 8, h - 8).setStrokeStyle(1, 0xffffff, 0.4))
-    this.add(this.scene.add.text(0, -h * 0.18, def.name, { fontSize: `${font}px`, color: '#ffffff', align: 'center', wordWrap: { width: w - 12 } }).setOrigin(0.5))
-    this.add(this.scene.add.text(0, h * 0.12, def.type, { fontSize: `${font}px`, color: '#e8e8e8' }).setOrigin(0.5))
+    this.add(this.scene.add.text(0, -h * 0.18, def.name, { ...textStyle(font), align: 'center', wordWrap: { width: w - 12 } }).setOrigin(0.5))
+    this.add(this.scene.add.text(0, h * 0.12, def.type, textStyle(font, COLORS.text, false)).setOrigin(0.5))
 
     if (def.type !== 'Leader')
-      this.add(this.scene.add.text(-w / 2 + 5, -h / 2 + 3, String(def.cost), { fontSize: `${font + 2}px`, color: '#ffe082', fontStyle: 'bold' }))
+      this.add(this.scene.add.text(-w / 2 + 5, -h / 2 + 3, String(def.cost), textStyle(font + 2, COLORS.gold)))
 
   }
 
@@ -97,10 +127,19 @@ export class CardSprite extends Phaser.GameObjects.Container {
     const power    = view.power ?? view.def!.power
 
     if (power > 0)
-      this.add(this.scene.add.text(0, h / 2 - 3, String(power), { fontSize: `${font + 1}px`, color: '#ffffff', backgroundColor: '#000000a0', padding: { x: 3, y: 1 } }).setOrigin(0.5, 1))
+      this.add(this.scene.add.text(0, h / 2 - 3, String(power), { ...textStyle(font + 1), backgroundColor: cssAlpha(COLORS.shadow, 0.63), padding: { x: 3, y: 1 } }).setOrigin(0.5, 1))
 
     if (view.don)
-      this.add(this.scene.add.text(w / 2 - 3, -h / 2 + 3, `+${view.don}`, { fontSize: `${font}px`, color: '#000000', backgroundColor: '#ffd54a', padding: { x: 3, y: 1 } }).setOrigin(1, 0))
+      this.add(this.scene.add.text(w / 2 - 3, -h / 2 + 3, `+${view.don}`, { ...textStyle(font, COLORS.cardBorder), backgroundColor: cssAlpha(COLORS.gold, 1), padding: { x: 3, y: 1 } }).setOrigin(1, 0))
+
+  }
+
+
+  private drawCount(count: number): void {
+    const { w, h } = this.cardSize
+    const font     = Math.max(9, Math.round(h * 0.11))
+
+    this.add(this.scene.add.text(w / 2 - 4, h / 2 - 3, String(count), { ...textStyle(font), backgroundColor: cssAlpha(COLORS.shadow, 0.8), padding: { x: 5, y: 1 } }).setOrigin(1, 1))
 
   }
 

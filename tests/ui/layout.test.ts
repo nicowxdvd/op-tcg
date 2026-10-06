@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { allRects, computeLayout, contains, donSlots, handSlots, overlaps } from '../../src/ui/layout'
+import { allRects, computeLayout, contains, donSlots, fanSlots, overlaps } from '../../src/ui/layout'
 
-const SIZES = [[1280, 720], [1920, 1080]] as const
+const SIZES = [[1024, 600], [1280, 720], [1920, 1080], [2560, 1440], [2560, 1080]] as const
 
 describe('layout', () => {
 
@@ -33,15 +33,52 @@ describe('layout', () => {
     expect(large.card.w).toBeCloseTo(small.card.w * 2)
     expect(large.self.leader.x).toBeCloseTo(small.self.leader.x * 2)
     expect(large.rival.hand.y).toBeCloseTo(small.rival.hand.y * 2)
+    expect(large.banner.h).toBeCloseTo(small.banner.h * 2)
 
   })
 
 
-  it('el lado rival es el espejo vertical del propio', () => {
-    const layout = computeLayout(1280, 720)
+  it('el lado rival es el giro de 180 grados del propio', () => {
+    const { self, rival, content } = computeLayout(1280, 720)
+    const centerX                  = self.panel.x + self.panel.w / 2
 
-    expect(layout.rival.leader.y + layout.rival.leader.h).toBeCloseTo(720 - layout.self.leader.y)
-    expect(layout.rival.leader.x).toBe(layout.self.leader.x)
+    expect(rival.leader.y + rival.leader.h).toBeCloseTo(720 - self.leader.y)
+    expect(rival.leader.x + rival.leader.w / 2).toBeCloseTo(2 * centerX - (self.leader.x + self.leader.w / 2))
+    expect(rival.panel.y).toBeLessThan(self.panel.y)
+    expect(content.w).toBe(1280)
+
+  })
+
+
+  it.each(SIZES)('los paneles usan al menos 90%% del alto a %ix%i', (width, height) => {
+    const { self, rival } = computeLayout(width, height)
+
+    expect((self.panel.y + self.panel.h - rival.panel.y) / height).toBeGreaterThanOrEqual(0.9)
+
+  })
+
+
+  it('en pantalla ultraancha centra el contenido sin deformarlo', () => {
+    const wide = computeLayout(2560, 1080)
+    const base = computeLayout(2160, 1080)
+
+    expect(wide.content.w).toBe(2160)
+    expect(wide.content.x).toBe(200)
+    expect(wide.card.w).toBeCloseTo(base.card.w)
+
+  })
+
+
+  it.each(SIZES)('las zonas de cada panel quedan dentro de su panel a %ix%i', (width, height) => {
+    const { self, rival } = computeLayout(width, height)
+
+    for (const side of [self, rival])
+      for (const rect of [side.life, side.leader, side.stage, side.don, side.donDeck, side.deck, side.trash, side.characters]) {
+        expect(rect.x).toBeGreaterThanOrEqual(side.panel.x)
+        expect(rect.y).toBeGreaterThanOrEqual(side.panel.y)
+        expect(rect.x + rect.w).toBeLessThanOrEqual(side.panel.x + side.panel.w + 0.001)
+        expect(rect.y + rect.h).toBeLessThanOrEqual(side.panel.y + side.panel.h + 0.001)
+      }
 
   })
 
@@ -57,28 +94,33 @@ describe('layout', () => {
   })
 
 
-  it('la mano cabe en su zona con cualquier cantidad de cartas', () => {
-    const { self, handCard } = computeLayout(1280, 720)
-
-    for (const count of [0, 1, 5, 10]) {
-      const slots = handSlots(self.hand, count, handCard)
-
-      expect(slots).toHaveLength(count)
-
-      for (const slot of slots) {
-        expect(slot.x).toBeGreaterThanOrEqual(self.hand.x)
-        expect(slot.x + slot.w).toBeLessThanOrEqual(self.hand.x + self.hand.w)
-      }
-    }
-
-  })
-
-
   it('los DON!! caben en su área', () => {
     const { self } = computeLayout(1280, 720)
 
     for (const point of donSlots(self.don, 10)) {
       expect(contains(self.don, point.x, point.y)).toBe(true)
+    }
+
+  })
+
+
+  it('el abanico queda centrado y simétrico con cualquier cantidad', () => {
+    const { rival, handCard } = computeLayout(1280, 720)
+
+    for (const count of [0, 1, 5, 10]) {
+      const slots = fanSlots(rival.hand, count, handCard)
+
+      expect(slots).toHaveLength(count)
+
+      if (count > 1) {
+        expect(slots[0].angle).toBeCloseTo(-slots[count - 1].angle)
+        expect(slots[0].x + slots[count - 1].x).toBeCloseTo(2 * (rival.hand.x + rival.hand.w / 2))
+      }
+
+      for (const slot of slots) {
+        expect(slot.x - handCard.w / 2).toBeGreaterThanOrEqual(rival.hand.x - 0.001)
+        expect(slot.x + handCard.w / 2).toBeLessThanOrEqual(rival.hand.x + rival.hand.w + 0.001)
+      }
     }
 
   })

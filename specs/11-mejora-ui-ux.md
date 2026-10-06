@@ -1,6 +1,6 @@
 # SPEC 11 — Mejora de UI/UX (estilo, tablero responsive, cartas nítidas)
 
-> **Estado:** Borrador
+> **Estado:** Implementado
 > **Depende de:** SPEC 06
 > **Fecha:** 2026-10-05
 > **Objetivo:** Rediseñar el tablero siguiendo la maqueta de referencia (paleta, iconografía, reversos y turno activo en dorado), hacerlo responsive a la pantalla y mostrar las imágenes de las cartas nítidas, sin tocar el motor ni la IA.
