@@ -14,7 +14,7 @@ Un simulador web del **One Piece Card Game** para aprender a jugar. La idea: sen
 | Efectos y keywords | `04-efectos-keywords` | Zarpó (implementado) |
 | Datos de cartas | `05-datos` | Zarpó (implementado) |
 | UI con Phaser | `06-ui-phaser` | Zarpó (implementado) |
-| Mejora de UI/UX | `11-mejora-ui-ux` | En el mapa |
+| Mejora de UI/UX | `11-mejora-ui-ux` | Zarpó (implementado) |
 | Modo aprendizaje | `07-modo-aprendizaje` | En el mapa |
 | IA simple | `08-ia-simple` | Zarpó (implementado) |
 | Pulido | `09-pulido` | En el mapa |
