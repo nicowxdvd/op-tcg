@@ -15,7 +15,7 @@ import { LifeArea } from '../ui/LifeArea'
 import { PromptDialog } from '../ui/PromptDialog'
 import type { PromptOption } from '../ui/PromptDialog'
 import { buildPrompt, describeAction } from '../ui/prompts'
-import { preloadCardImages } from '../ui/textures'
+import { buildSmallCards, preloadCardImages } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
 import { Zone } from '../ui/Zone'
 
@@ -67,6 +67,7 @@ export class Board extends Phaser.Scene {
 
   create() {
     this.ratio = pixelRatio(window.devicePixelRatio)
+    buildSmallCards(this, this.images)
     this.fitCamera()
     this.input.mouse?.disableContextMenu()
 

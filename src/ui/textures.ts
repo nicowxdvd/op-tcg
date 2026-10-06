@@ -1,4 +1,8 @@
 import * as Phaser from 'phaser'
+import { pixelRatio } from './viewport'
+
+const SMALL_HEIGHT = 420
+const SMALL_WIDTH  = 301
 
 
 export function cardTextureKey(defId: string): string {
@@ -31,6 +35,43 @@ export async function findCardImages(defIds: string[]): Promise<string[]> {
 export function preloadCardImages(scene: Phaser.Scene, defIds: string[]): void {
   for (const id of defIds)
     scene.load.image(cardTextureKey(id), `cards/${id}.jpg`)
+
+}
+
+
+export function smallTextureKey(defId: string): string {
+  return `${cardTextureKey(defId)}-small`
+
+}
+
+
+export function buildSmallCards(scene: Phaser.Scene, defIds: string[]): void {
+  for (const id of defIds) {
+    const source = scene.textures.get(cardTextureKey(id)).getSourceImage() as CanvasImageSource
+
+    if (scene.textures.exists(smallTextureKey(id)))
+      continue
+
+    const canvas  = scene.textures.createCanvas(smallTextureKey(id), SMALL_WIDTH, SMALL_HEIGHT)
+    const context = canvas?.getContext()
+
+    if (!canvas || !context)
+      continue
+
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.drawImage(source, 0, 0, SMALL_WIDTH, SMALL_HEIGHT)
+    canvas.refresh()
+
+  }
+
+}
+
+
+export function bestTextureKey(scene: Phaser.Scene, defId: string, displayHeight: number): string {
+  const small = smallTextureKey(defId)
+
+  return scene.textures.exists(small) && displayHeight * pixelRatio(window.devicePixelRatio) <= SMALL_HEIGHT ? small : cardTextureKey(defId)
 
 }
 

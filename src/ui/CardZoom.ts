@@ -30,7 +30,7 @@ export class CardZoom extends Phaser.GameObjects.Container {
 
     this.removeAll(true)
     this.add(this.scene.add.rectangle(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h, 0x000000, 0.75))
-    this.add(new CardSprite(this.scene, rect.x + picture.w / 2, rect.y + picture.h / 2, picture, { def }))
+    this.add(new CardSprite(this.scene, rect.x + picture.w / 2, rect.y + picture.h / 2, picture, { def, fullResolution: true }))
     this.add(this.scene.add.text(textX, rect.y + 6, def.name, { fontSize: '16px', color: '#ffffff', fontStyle: 'bold', wordWrap: { width: rect.w - picture.w - 16 } }))
     this.add(this.scene.add.text(textX, rect.y + 52, stats, { fontSize: '12px', color: '#ffe082', wordWrap: { width: rect.w - picture.w - 16 } }))
     this.add(this.scene.add.text(textX, rect.y + 90, this.textOf(def.id), { fontSize: '12px', color: '#e8e8e8', wordWrap: { width: rect.w - picture.w - 16 } }))

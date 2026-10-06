@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import type { CardDef } from '../engine'
 import type { Size } from './layout'
-import { cardTextureKey, hasCardImage } from './textures'
+import { bestTextureKey, hasCardImage } from './textures'
 
 export interface CardView {
   def: CardDef | null
@@ -9,6 +9,7 @@ export interface CardView {
   rested?: boolean
   power?: number
   don?: number
+  fullResolution?: boolean
 
 }
 
@@ -32,7 +33,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
     this.setSize(size.w, size.h)
 
     if (view.def && hasCardImage(scene, view.def.id))
-      this.add(scene.add.image(0, 0, cardTextureKey(view.def.id)).setDisplaySize(size.w, size.h))
+      this.add(scene.add.image(0, 0, bestTextureKey(scene, view.def.id, view.fullResolution ? Infinity : size.h)).setDisplaySize(size.w, size.h))
     else
       this.drawFallback(view.def)
 
