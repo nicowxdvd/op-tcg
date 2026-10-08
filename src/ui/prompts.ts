@@ -2,6 +2,8 @@ import type { Action, GameState, PlayerId } from '../engine'
 
 export interface PromptSpec {
   title: string
+  subtitle?: string
+  hint?: string
   options: { label: string; action: Action }[]
 
 }
@@ -24,7 +26,7 @@ export function nameOf(state: GameState, instanceId: string): string {
 export function describeAction(state: GameState, action: Action): string {
   switch (action.type) {
     case 'Mulligan':
-      return action.redraw ? 'Redraw hand' : 'Keep hand'
+      return action.redraw ? 'Mulligan' : 'Quedarse'
     case 'Choose':
       return nameOf(state, action.option)
     case 'PassChoice':
@@ -61,7 +63,7 @@ export function buildPrompt(state: GameState, legal: Action[], viewer: PlayerId)
   const options = (actions: Action[]) => actions.map(action => ({ label: describeAction(state, action), action }))
 
   if (state.phase === 'mulligan')
-    return { title: `${viewer.toUpperCase()}: keep your hand or redraw?`, options: options(legal) }
+    return { title: 'Tu mano inicial — ¿quedártela o rebarajar?', subtitle: viewer === state.first ? 'Vas primero' : 'Vas segundo', hint: 'Mulligan = rebaraja y roba 5 nuevas (una sola vez).', options: options([...legal].sort((a, b) => Number(a.type === 'Mulligan' && a.redraw) - Number(b.type === 'Mulligan' && b.redraw))) }
   if (state.pending)
     return { title: `${viewer.toUpperCase()}: choose (${state.pending.kind})`, options: options(legal) }
   if (state.battle && state.battle.attackerPlayer !== viewer && state.battle.step !== 'counter') {
