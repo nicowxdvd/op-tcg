@@ -37,14 +37,14 @@ import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
 import { fadeIn, goTo } from '../ui/transitions'
-import { COLORS, RADIUS, textStyle } from '../ui/theme'
+import { COLORS, CARD_FACES, RADIUS, textStyle } from '../ui/theme'
+import { drawAttackArrow } from '../ui/AttackArrow'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
 
 type DragSource =
   | { kind: 'hand'; id: string }
   | { kind: 'don' }
-  | { kind: 'attacker'; id: string }
 
 const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
@@ -67,6 +67,8 @@ export class Board extends Phaser.Scene {
   private selection: HandSelection | null = null
   private hand: FanView | null = null
   private counterOpen = false
+  private attackerId: string | null = null
+  private pendingAttack: Action | null = null
   private notice: string | null = null
   private dirty = true
   private viewer: PlayerId = 'p1'
@@ -158,7 +160,11 @@ export class Board extends Phaser.Scene {
         this.closeHandDialog()
 
     })
-    this.input.keyboard?.on('keydown-ESC', () => this.closeHandDialog())
+    this.input.keyboard?.on('keydown-ESC', () => {
+      this.closeHandDialog()
+      this.cancelAttack()
+
+    })
 
   }
 
@@ -203,6 +209,9 @@ export class Board extends Phaser.Scene {
     if (!this.inCounterStep())
       this.counterOpen = false
 
+    if (this.attackerId && !this.legal.some(action => action.type === 'Attack' && action.attacker === this.attackerId))
+      this.cancelAttack()
+
     const { layout } = this
     const rival      = opponentOf(this.viewer)
 
@@ -222,6 +231,8 @@ export class Board extends Phaser.Scene {
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
     else if (this.inCounterStep())
       this.showCounterPrompt()
+    else
+      this.showAttackConfirm()
 
     const events = this.queued
 
@@ -319,6 +330,7 @@ export class Board extends Phaser.Scene {
     const started = state.phase !== 'mulligan'
     const attacks = new Set(own ? this.legal.flatMap(action => action.type === 'Attack' ? [action.attacker] : []) : [])
     const uses    = new Set(own ? this.legal.flatMap(action => action.type === 'ActivateEffect' ? [action.source] : []) : [])
+    const targets = new Set(!own && this.attackerId ? this.legal.flatMap(action => action.type === 'Attack' && action.attacker === this.attackerId ? [action.target] : []) : [])
 
     const place = (rect: SideLayout['leader'], instance: CardInstance, extra: Partial<CardView>, attackId: string) => {
       const middle = center(rect)
@@ -328,9 +340,20 @@ export class Board extends Phaser.Scene {
       this.wireZoom(sprite)
 
       if (attacks.has(attackId)) {
+        sprite.setHighlight(this.attackerId === attackId ? COLORS.gold : ATTACK).enableInput()
+        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.leftButtonReleased() && pointer.getDistance() < CLICK_DISTANCE)
+            this.selectAttacker(attackId)
+
+        })
+      }
+      else if (targets.has(attackId)) {
         sprite.setHighlight(ATTACK).enableInput()
-        this.input.setDraggable(sprite)
-        this.sources.set(sprite, { kind: 'attacker', id: attackId })
+        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.leftButtonReleased() && pointer.getDistance() < CLICK_DISTANCE)
+            this.askAttack(attackId)
+
+        })
       }
       else if (uses.has(instance.instanceId)) {
         sprite.setHighlight(ACTIVATE)
@@ -561,7 +584,7 @@ export class Board extends Phaser.Scene {
 
   private actionsAt(source: DragSource, x: number, y: number): Action[] {
     const state = this.controller.getState()
-    const { self, rival } = this.layout
+    const { self } = this.layout
 
     if (source.kind === 'hand') {
       const card = state.players[this.viewer].hand.find(candidate => candidate.instanceId === source.id)
@@ -571,16 +594,80 @@ export class Board extends Phaser.Scene {
 
     }
 
-    if (source.kind === 'don') {
-      const target = this.targetAt(self, state.players[this.viewer], x, y)
+    const target = this.targetAt(self, state.players[this.viewer], x, y)
 
-      return target ? this.legal.filter(action => action.type === 'AttachDon' && action.target === target) : []
+    return target ? this.legal.filter(action => action.type === 'AttachDon' && action.target === target) : []
 
-    }
+  }
 
-    const target = this.targetAt(rival, state.players[opponentOf(this.viewer)], x, y)
 
-    return target ? this.legal.filter(action => action.type === 'Attack' && action.attacker === source.id && action.target === target) : []
+  private selectAttacker(id: string) {
+    this.attackerId    = this.attackerId === id ? null : id
+    this.pendingAttack = null
+    this.dirty         = true
+
+  }
+
+
+  private askAttack(target: string) {
+    this.pendingAttack = this.legal.find(action => action.type === 'Attack' && action.attacker === this.attackerId && action.target === target) ?? null
+    this.dirty         = true
+
+  }
+
+
+  private cancelAttack() {
+    this.attackerId    = null
+    this.pendingAttack = null
+    this.dirty         = true
+
+  }
+
+
+  private centerOf(player: PlayerId, side: SideLayout, id: string) {
+    const characters = this.controller.getState().players[player].characters
+    const index      = characters.findIndex(character => character.card.instanceId === id)
+
+    return center(id === 'leader' ? side.leader : side.slots[index])
+
+  }
+
+
+  private nameFor(player: PlayerId, id: string): string {
+    const state = this.controller.getState()
+
+    return nameOf(state, id === 'leader' ? state.players[player].leader.instanceId : id)
+
+  }
+
+
+  private leaderColor(player: PlayerId): number {
+    const state = this.controller.getState()
+
+    return CARD_FACES[state.defs[state.players[player].leader.defId].colors[0]] ?? COLORS.gold
+
+  }
+
+
+  private showAttackConfirm() {
+    const attack = this.pendingAttack
+
+    if (!attack || attack.type !== 'Attack' || !this.attackerId)
+      return
+
+    const rival = opponentOf(this.viewer)
+    const { self, rival: rivalSide } = this.layout
+
+    this.layer.add(drawAttackArrow(this, this.centerOf(this.viewer, self, attack.attacker), this.centerOf(rival, rivalSide, attack.target), this.leaderColor(this.viewer), this.leaderColor(rival)))
+    this.showDialog(`¿Atacar a ${this.nameFor(rival, attack.target)} con ${this.nameFor(this.viewer, attack.attacker)}?`, [{ label: 'Atacar', run: () => this.confirmAttack(attack) }, { label: 'Cancelar', run: () => this.cancelAttack() }], false)
+
+  }
+
+
+  private confirmAttack(attack: Action) {
+    this.attackerId    = null
+    this.pendingAttack = null
+    this.send(attack)
 
   }
 
