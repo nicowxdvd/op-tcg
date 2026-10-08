@@ -140,7 +140,8 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const button      = { x: sideX, y: report.y - margin - height * 0.055, w: sideW, h: height * 0.055 }
   const logY        = banner.y + banner.h + margin
   const log         = { x: sideX, y: logY, w: sideW, h: button.y - margin - logY }
-  const zoom        = { x: sideX, y: logY, w: sideW, h: Math.min(log.h, sideW * 0.5) }
+  const zoomH       = height * 0.62
+  const zoom        = { x: cx + margin, y: margin, w: zoomH * CARD_RATIO, h: zoomH }
 
   return { width, height, content: { x: cx, y: 0, w: cw, h: height }, card, handCard, self, rival, fullscreen, status, banner, log, zoom, button, report }
 
@@ -169,7 +170,7 @@ export function sideRects(side: SideLayout): Rect[] {
 
 
 export function allRects(layout: BoardLayout): Rect[] {
-  return [...sideRects(layout.self), ...sideRects(layout.rival), layout.fullscreen, layout.status, layout.banner, layout.zoom, layout.button, layout.report]
+  return [...sideRects(layout.self), ...sideRects(layout.rival), layout.fullscreen, layout.status, layout.banner, layout.button, layout.report]
 
 }
 
