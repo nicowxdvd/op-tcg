@@ -25,7 +25,7 @@ describe('buildPrompt', () => {
     const player = state.first
     const prompt = buildPrompt(state, getLegalActions(state, player), player)
 
-    expect(prompt?.options.map(option => option.label).sort()).toEqual(['Keep hand', 'Redraw hand'])
+    expect(prompt?.options.map(option => option.label).sort()).toEqual(['Mulligan', 'Quedarse'])
 
   })
 

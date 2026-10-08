@@ -96,7 +96,7 @@ describe('GameController', () => {
     const player     = controller.actor()
     const prompt     = buildPrompt(controller.getState(), controller.getLegal(player), player)
 
-    expect(prompt?.options.map(option => option.label)).toEqual(['Keep hand', 'Redraw hand'])
+    expect(prompt?.options.map(option => option.label)).toEqual(['Quedarse', 'Mulligan'])
 
     controller.dispatch({ type: 'Mulligan', player, redraw: false })
     controller.dispatch({ type: 'Mulligan', player: controller.actor(), redraw: false })
