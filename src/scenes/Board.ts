@@ -31,7 +31,7 @@ import { GameLog } from '../ui/GameLog'
 import { describeEvent } from '../learn/describeEvent'
 import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
-import type { PromptOption } from '../ui/PromptDialog'
+import type { PromptDetails, PromptOption } from '../ui/PromptDialog'
 import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
@@ -219,7 +219,7 @@ export class Board extends Phaser.Scene {
     const prompt = buildPrompt(state, this.legal, this.viewer)
 
     if (prompt)
-      this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })))
+      this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })), true, { subtitle: prompt.subtitle, hint: prompt.hint })
     else if (this.inCounterStep())
       this.showCounterPrompt()
 
@@ -604,9 +604,9 @@ export class Board extends Phaser.Scene {
   }
 
 
-  private showDialog(title: string, options: PromptOption[], veiled = true) {
+  private showDialog(title: string, options: PromptOption[], veiled = true, details?: PromptDetails) {
     this.dialog?.destroy()
-    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options, veiled)
+    this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options, veiled, details)
     this.add.existing(this.dialog)
 
   }

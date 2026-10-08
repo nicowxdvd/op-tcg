@@ -42,6 +42,8 @@ export const DURATION = { turn: 200, quick: 150, move: 250, hover: 70 } as const
 export const MIN_SIZE = { w: 1024, h: 600 } as const
 export const MAX_DPR  = 2
 
+export const DIALOG_FONT = '"Outfit", "Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+
 
 export function css(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`
