@@ -2,7 +2,7 @@ import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createController } from '../app/createController'
-import { rematchConfig } from '../app/gameConfig'
+import { HUMAN_PLAYER, rematchConfig } from '../app/gameConfig'
 import type { MatchConfig } from '../app/gameConfig'
 import { gameResult } from '../app/gameResult'
 import { soundsFor } from '../app/sounds'
@@ -30,7 +30,9 @@ import { PlayerBadge } from '../ui/PlayerBadge'
 import { PlayerPanel } from '../ui/PlayerPanel'
 import { MOCK_COUNTER_CLOCK, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
 import { GameLog } from '../ui/GameLog'
-import { describeEvent } from '../learn/describeEvent'
+import { describeEntry } from '../learn/logEntry'
+import type { LogContext } from '../learn/logEntry'
+import { playerNames } from '../app/players'
 import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
 import { StartRollDialog } from '../ui/StartRollDialog'
@@ -112,7 +114,7 @@ export class Board extends Phaser.Scene {
 
     const state = this.controller.getState()
 
-    this.log.add(describeEvent({ type: 'GameStarted', first: state.first }, state))
+    this.log.add(describeEntry({ type: 'GameStarted', first: state.first }, state, this.logContext()))
 
   }
 
@@ -139,7 +141,7 @@ export class Board extends Phaser.Scene {
         audio.play(name)
 
       for (const event of events)
-        this.log.add(describeEvent(event, this.controller.getState()))
+        this.log.add(describeEntry(event, this.controller.getState(), this.logContext()))
 
       this.dirty = true
 
@@ -311,6 +313,12 @@ export class Board extends Phaser.Scene {
     this.learnOpen = !this.learnOpen
     savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
+
+  }
+
+
+  private logContext(): LogContext {
+    return { names: playerNames(this.config), self: HUMAN_PLAYER }
 
   }
 

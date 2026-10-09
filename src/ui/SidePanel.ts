@@ -5,13 +5,15 @@ import type { Instruction } from './instructions'
 import type { PhaseDescription } from '../learn/describePhase'
 import type { BoardLayout, LearnLayout, Rect } from './layout'
 import { LearnPanel } from './LearnPanel'
+import { LogView } from './LogView'
+import type { LogEntry } from '../learn/logEntry'
 import { COLORS, RADIUS, textStyle } from './theme'
 
 export interface SideData {
   header: string
   banner: Instruction | null
   notice: string | null
-  log: string[]
+  log: LogEntry[]
   learn: LearnLayout
   info: PhaseDescription | null
   onToggleLearn: () => void
@@ -174,17 +176,8 @@ export class SidePanel extends Phaser.GameObjects.Container {
   }
 
 
-  private drawLog(rect: Rect, lines: string[]): void {
-    const font = Math.max(9, Math.round(rect.w * 0.04))
-    const text = this.scene.add.text(rect.x + 2, rect.y + 2, lines.join('\n'), { ...textStyle(font, COLORS.text, false), wordWrap: { width: rect.w - 4 }, lineSpacing: font * 0.5 })
-    let shown  = lines
-
-    while (text.height > rect.h && shown.length > 1) {
-      shown = shown.slice(1)
-      text.setText(shown.join('\n'))
-    }
-
-    this.add(text)
+  private drawLog(rect: Rect, entries: LogEntry[]): void {
+    this.add(new LogView(this.scene, rect, entries))
 
   }
 
