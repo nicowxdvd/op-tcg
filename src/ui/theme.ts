@@ -71,8 +71,14 @@ export function panelTint(color: number): { fill: number; frame: number } {
 }
 
 
+export function textResolution(): number {
+  return Math.min(Math.max(globalThis.devicePixelRatio || 1, 1), MAX_DPR)
+
+}
+
+
 export function textStyle(size: number, color: number = COLORS.text, bold = true): Phaser.Types.GameObjects.Text.TextStyle {
-  return { fontFamily: FONT.family, fontSize: `${Math.round(size)}px`, fontStyle: bold ? FONT.weight : 'normal', color: css(color) }
+  return { fontFamily: FONT.family, fontSize: `${Math.round(size)}px`, fontStyle: bold ? FONT.weight : 'normal', color: css(color), resolution: textResolution() }
 
 }
 
