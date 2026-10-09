@@ -28,11 +28,11 @@ import type { HandSort } from '../ui/handSort'
 import { instructionFor, phaseLabel } from '../ui/instructions'
 import { PlayerBadge } from '../ui/PlayerBadge'
 import { PlayerPanel } from '../ui/PlayerPanel'
-import { MOCK_COUNTER_CLOCK, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
+import { LOW_MS, MatchClock, formatClock } from '../app/clock'
 import { GameLog } from '../ui/GameLog'
 import { describeEntry } from '../learn/logEntry'
 import type { LogContext } from '../learn/logEntry'
-import { playerNames } from '../app/players'
+import { playerNames, playersFor } from '../app/players'
 import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
 import { StartRollDialog } from '../ui/StartRollDialog'
@@ -90,6 +90,9 @@ export class Board extends Phaser.Scene {
   private queued: GameEvent[] = []
   private lastActive: PlayerId | null = null
   private log = new GameLog()
+  private clock = new MatchClock()
+  private lastTick = 0
+  private badges: Partial<Record<PlayerId, PlayerBadge>> = {}
   private learnOpen = true
   private handSort: HandSort = 'original'
   private config: MatchConfig = MOCK_CONFIG
@@ -110,6 +113,8 @@ export class Board extends Phaser.Scene {
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
     this.log        = new GameLog()
+    this.clock      = new MatchClock()
+    this.lastTick   = Date.now()
     this.learnOpen  = loadPreferences().learnPanel
 
     const state = this.controller.getState()
@@ -152,6 +157,7 @@ export class Board extends Phaser.Scene {
       this.controller.dispose()
 
     })
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.tickClock() })
     this.scale.on('resize', () => this.fitCamera())
     this.events.once('shutdown', () => this.scale.off('resize'))
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
@@ -286,13 +292,21 @@ export class Board extends Phaser.Scene {
   private drawFrames(active: PlayerId, rival: PlayerId) {
     const state   = this.controller.getState()
     const changed = this.lastActive !== null && this.lastActive !== active
-    const counter = state.battle?.step === 'counter' ? opponentOf(state.battle.attackerPlayer) : null
-    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF }]
+    const players = playersFor(this.config)
+    const running = state.winner ? null : this.controller.actor()
+    const sides   = [{ id: rival, side: this.layout.rival }, { id: this.viewer, side: this.layout.self }]
 
     this.lastActive = active
 
-    for (const { id, side, mock } of sides)
-      this.layer.add([new PlayerPanel(this, side.panel, this.leaderColor(id), id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
+    this.badges = {}
+
+    for (const { id, side } of sides) {
+      const left  = this.clock.remaining(id)
+      const badge = new PlayerBadge(this, side.badge, side.clock, players[id], id === active, formatClock(left), id === running, left < LOW_MS)
+
+      this.badges[id] = badge
+      this.layer.add([new PlayerPanel(this, side.panel, this.leaderColor(id), id === active, changed), badge])
+    }
 
   }
 
@@ -313,6 +327,23 @@ export class Board extends Phaser.Scene {
     this.learnOpen = !this.learnOpen
     savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
+
+  }
+
+
+  private tickClock() {
+    const now = Date.now()
+
+    if (!this.controller.getState().winner)
+      this.clock.tick(this.controller.actor(), now - this.lastTick)
+
+    this.lastTick = now
+
+    for (const id of ['p1', 'p2'] as const) {
+      const left = this.clock.remaining(id)
+
+      this.badges[id]?.setClock(formatClock(left), left < LOW_MS)
+    }
 
   }
 

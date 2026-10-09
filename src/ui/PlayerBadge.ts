@@ -1,12 +1,14 @@
 import * as Phaser from 'phaser'
 import type { Rect } from './layout'
-import type { MockPlayer } from './mockPlayers'
-import { COLORS, RADIUS, textStyle } from './theme'
+import type { PlayerInfo } from '../app/players'
+import { COLORS, RADIUS, css, textStyle } from './theme'
 
 
 export class PlayerBadge extends Phaser.GameObjects.Container {
 
-  constructor(scene: Phaser.Scene, pill: Rect, clock: Rect, player: MockPlayer, active: boolean, clockText: string) {
+  private readonly clockLabel: Phaser.GameObjects.Text
+
+  constructor(scene: Phaser.Scene, pill: Rect, clock: Rect, player: PlayerInfo, active: boolean, clockText: string, running: boolean, low: boolean) {
     super(scene, 0, 0)
 
     const font    = Math.max(9, Math.round(pill.h * 0.42))
@@ -25,13 +27,12 @@ export class PlayerBadge extends Phaser.GameObjects.Container {
     this.add([frame, chip])
 
     const nameColor = active ? COLORS.dialog : COLORS.text
-    const name      = scene.add.text(pill.x + pill.h * 0.9 + font * 1.6, mid, player.name, textStyle(font, nameColor)).setOrigin(0, 0.5)
-    const room      = pill.w - pill.h * 0.9 - font * 1.6 - reserve - 6
+    const name      = scene.add.text(pill.x + pill.h * 0.9, mid, player.name, textStyle(font, nameColor)).setOrigin(0, 0.5)
+    const room      = pill.w - pill.h * 0.9 - reserve - 6
 
     while (name.width > room && name.text.length > 3)
       name.setText(`${name.text.slice(0, -2)}…`)
 
-    this.add(scene.add.text(pill.x + pill.h * 0.9, mid, player.flag, textStyle(font, COLORS.text)).setOrigin(0, 0.5))
     this.add(name)
 
     if (label) {
@@ -43,7 +44,18 @@ export class PlayerBadge extends Phaser.GameObjects.Container {
 
     }
 
-    this.add(scene.add.text(clock.x + clock.w / 2, clock.y + clock.h / 2, `⏱ ${clockText}`, textStyle(small, COLORS.text)).setOrigin(0.5))
+    this.clockLabel = scene.add.text(clock.x + clock.w / 2 + small * 0.4, clock.y + clock.h / 2, `⏱ ${clockText}`, textStyle(small, low ? COLORS.lifeText : COLORS.text)).setOrigin(0.5)
+
+    if (running)
+      chip.fillStyle(COLORS.clockRunning, 1).fillCircle(clock.x + clock.h * 0.45, clock.y + clock.h / 2, clock.h * 0.13)
+
+    this.add(this.clockLabel)
+
+  }
+
+
+  setClock(text: string, low: boolean): void {
+    this.clockLabel.setText(`⏱ ${text}`).setColor(css(low ? COLORS.lifeText : COLORS.text))
 
   }
 
