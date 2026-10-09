@@ -3,6 +3,8 @@ import type { Action, GameEvent, GameState, PlayerId } from '../engine'
 import { advanceRng, chooseAction } from '../ai'
 import type { AIPlayer } from '../ai'
 
+const ROLL_DELAY_MS = 3200
+
 export type GameHandler = (events: GameEvent[]) => void
 
 
@@ -91,7 +93,7 @@ export class GameController {
 
     if (!ai || this.disposed || this.state.phase === 'gameOver')
       return null
-    if (this.state.phase === 'mulligan')
+    if (this.state.phase === 'startRoll' || this.state.phase === 'mulligan')
       return this.getLegal(ai.player).length > 0 ? ai.player : null
 
     const state   = this.state
@@ -106,7 +108,7 @@ export class GameController {
     if (this.timer !== null || this.cpuDecider() === null)
       return
 
-    this.timer = setTimeout(() => this.stepCpu(), this.ai!.delayMs)
+    this.timer = setTimeout(() => this.stepCpu(), this.state.phase === 'startRoll' ? Math.max(this.ai!.delayMs, ROLL_DELAY_MS) : this.ai!.delayMs)
 
   }
 

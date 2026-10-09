@@ -42,6 +42,7 @@ function attack(event: Extract<GameEvent, { type: 'AttackDeclared' }>, state: Ga
 
 
 const DESCRIBERS: Describers = {
+  FirstChosen: event => `${who(event.player)} elige jugar ${event.first === event.player ? 'primero' : 'segundo'}`,
   MulliganDecided: event => `${who(event.player)} ${event.redraw ? 'rebaraja su mano' : 'se queda con su mano'}`,
   GameStarted: event => `Empieza la partida: juega primero ${who(event.first)}`,
   PhaseChanged: event => `Turno ${event.turn} de ${who(event.active)}: fase ${PHASE_NAMES[event.phase]}`,

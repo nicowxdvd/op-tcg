@@ -29,10 +29,10 @@ function donCount(state: GameState, id: PlayerId): number {
 function mulligans(state: GameState): GameState {
   let next = state
 
-  while (next.phase === 'mulligan') {
+  while (next.phase === 'startRoll' || next.phase === 'mulligan') {
     const player = getLegalActions(next, 'p1').length ? 'p1' : 'p2'
 
-    next = apply(next, { type: 'Mulligan', player, redraw: false }).state
+    next = apply(next, next.phase === 'startRoll' ? { type: 'ChooseFirst', player, goFirst: true } : { type: 'Mulligan', player, redraw: false }).state
 
   }
 

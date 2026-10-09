@@ -10,7 +10,7 @@ describe('gameConfig', () => {
 
     expect(state.players.p1.leader.defId).toBe(state.defs[state.players.p1.leader.defId].id)
     expect(state.players.p1.leader.defId).not.toBe(state.players.p2.leader.defId)
-    expect(state.phase).toBe('mulligan')
+    expect(state.phase).toBe('startRoll')
 
   })
 

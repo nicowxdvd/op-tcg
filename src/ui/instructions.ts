@@ -6,7 +6,7 @@ export interface Instruction {
 
 }
 
-const PHASES: Record<GameState['phase'], string> = { mulligan: 'Mulligan', refresh: 'Refresh', draw: 'Draw', don: 'DON!!', main: 'Main', end: 'End', gameOver: 'Fin' }
+const PHASES: Record<GameState['phase'], string> = { startRoll: 'Sorteo', mulligan: 'Mulligan', refresh: 'Refresh', draw: 'Draw', don: 'DON!!', main: 'Main', end: 'End', gameOver: 'Fin' }
 
 
 export function phaseLabel(state: GameState): string {
@@ -20,6 +20,8 @@ export function instructionFor(state: GameState, legal: Action[], viewer: Player
     return { title: 'FIN', text: state.winner === viewer ? 'Ganaste la partida.' : 'Perdiste la partida.' }
   if (legal.length === 0)
     return { title: 'ESPERA', text: 'Juega el rival.' }
+  if (state.phase === 'startRoll')
+    return { title: 'ACTÚA TÚ', text: 'Sorteo: elige si juegas primero o segundo.' }
   if (state.phase === 'mulligan')
     return { title: 'ACTÚA TÚ', text: 'Mulligan: quedarse con la mano o rebarajar.' }
   if (state.pending)

@@ -9,8 +9,20 @@ export function other(id: PlayerId): PlayerId {
 }
 
 
-export function newGame(seed = 5): GameState {
+export function rawGame(seed = 5): GameState {
   return createGame({ seed, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+
+}
+
+
+export function skipRoll(state: GameState): GameState {
+  return apply(state, { type: 'ChooseFirst', player: state.rollWinner, goFirst: true }).state
+
+}
+
+
+export function newGame(seed = 5): GameState {
+  return skipRoll(rawGame(seed))
 
 }
 

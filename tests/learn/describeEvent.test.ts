@@ -8,6 +8,7 @@ const mine  = state.players[state.active].hand[0].instanceId
 const rival = state.active === 'p1' ? 'p2' : 'p1'
 
 const SAMPLES: { [K in GameEvent['type']]: Extract<GameEvent, { type: K }> } = {
+  FirstChosen: { type: 'FirstChosen', player: 'p1', first: 'p1' },
   MulliganDecided: { type: 'MulliganDecided', player: 'p1', redraw: true },
   GameStarted: { type: 'GameStarted', first: 'p1' },
   PhaseChanged: { type: 'PhaseChanged', phase: 'main', turn: 1, active: 'p1' },
