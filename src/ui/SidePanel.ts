@@ -35,6 +35,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
 
     this.drawLog(data.learn.log, data.log)
     this.drawReport(layout.report)
+    this.drawConcede(layout.concede)
 
   }
 
@@ -73,24 +74,49 @@ export class SidePanel extends Phaser.GameObjects.Container {
   }
 
 
+  private pill(rect: Rect, label: string, color: number = COLORS.text, fill: number = COLORS.pill, border: number = COLORS.zoneBorder, ratio = 0.46): void {
+    this.box(rect, fill, 1, border)
+    this.add(this.scene.add.text(rect.x + rect.w / 2, rect.y + rect.h / 2, label, textStyle(Math.max(8, Math.round(rect.h * ratio)), color)).setOrigin(0.5))
+
+  }
+
+
   private drawStatus(rect: Rect, header: string): void {
-    const font = Math.max(10, Math.round(rect.h * 0.24))
-    const row  = rect.y + rect.h * 0.72
-    const size = rect.h * 0.3
+    const rows = rect.h / 3
+    const high = rows * 0.82
+    const row  = (index: number) => rect.y + rows * index + (rows - high) / 2
+    const btn  = high * 1.1
 
-    this.add(this.scene.add.text(rect.x + rect.w / 2, rect.y + rect.h * 0.25, header, textStyle(font, COLORS.white)).setOrigin(0.5))
-    this.box({ x: rect.x + rect.w - size * 1.3, y: rect.y, w: size * 1.3, h: size * 1.1 }, COLORS.buttonDark, 1)
-    this.icon('minus', rect.x + rect.w - size * 0.65, rect.y + size * 0.55, size * 0.7)
+    this.pill({ x: rect.x, y: row(0), w: rect.w * 0.2, h: high }, '← Salir')
+    const title = this.scene.add.text(rect.x + rect.w * 0.43, row(0) + high / 2, header, textStyle(Math.max(10, Math.round(high * 0.5)), COLORS.white)).setOrigin(0.5)
 
-    const kinds: IconKind[] = ['sound', 'moon', 'gear']
+    while (title.width > rect.w * 0.44 && title.text.length > 3)
+      title.setText(`${title.text.slice(0, -2)}…`)
+
+    this.add(title)
+    this.pill({ x: rect.x + rect.w * 0.66, y: row(0) + high * 0.12, w: rect.w * 0.17, h: high * 0.76 }, 'BETA', COLORS.gold, COLORS.pill, COLORS.gold)
+    this.box({ x: rect.x + rect.w - btn, y: row(0), w: btn, h: high }, COLORS.buttonDark, 1)
+    this.icon('minus', rect.x + rect.w - btn / 2, row(0) + high / 2, high * 0.6)
+    this.pill({ x: rect.x, y: row(1), w: rect.w * 0.26, h: high }, 'Reiniciar')
+
+    const kinds: IconKind[] = ['sound', 'moon']
 
     kinds.forEach((kind, i) => {
-      const cx = rect.x + rect.w * (0.55 + i * 0.16)
+      const left = rect.x + i * (btn + 4)
 
-      this.box({ x: cx - size * 0.8, y: row - size * 0.8, w: size * 1.6, h: size * 1.6 }, COLORS.buttonDark, 1)
-      this.icon(kind, cx, row, size)
+      this.box({ x: left, y: row(2), w: btn, h: high }, COLORS.buttonDark, 1)
+      this.icon(kind, left + btn / 2, row(2) + high / 2, high * 0.6)
 
     })
+
+    const gearLeft = rect.x + rect.w - btn
+    const pills    = rect.x + 2 * (btn + 4)
+    const room     = gearLeft - 4 - pills
+
+    this.pill({ x: pills, y: row(2), w: room * 0.48, h: high }, 'Normal')
+    this.pill({ x: pills + room * 0.52, y: row(2), w: room * 0.48, h: high }, '✓ Asistido')
+    this.box({ x: gearLeft, y: row(2), w: btn, h: high }, COLORS.buttonDark, 1)
+    this.icon('gear', gearLeft + btn / 2, row(2) + high / 2, high * 0.6)
 
   }
 
@@ -102,7 +128,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
     const font = Math.max(10, Math.round(rect.h * 0.16))
     const pad  = rect.h * 0.12
 
-    this.box(rect, COLORS.crimson, 1)
+    this.box(rect, COLORS.banner, 1)
     this.add(this.scene.add.text(rect.x + pad, rect.y + pad, instruction.title, textStyle(font * 0.8, COLORS.text)).setAlpha(0.85))
     this.add(this.scene.add.text(rect.x + pad, rect.y + pad + font * 1.4, instruction.text, { ...textStyle(font, COLORS.white), wordWrap: { width: rect.w - 2 * pad } }))
 
@@ -144,6 +170,12 @@ export class SidePanel extends Phaser.GameObjects.Container {
     this.box(rect, COLORS.crimsonDark, 0.25, COLORS.crimson)
     this.icon('bug', rect.x + rect.w * 0.12, rect.y + rect.h / 2, rect.h * 0.4, COLORS.lifeText)
     this.add(this.scene.add.text(rect.x + rect.w * 0.2, rect.y + rect.h / 2, '¿Algo salió mal? Reportar un problema', { ...textStyle(font, COLORS.lifeText), wordWrap: { width: rect.w * 0.76 } }).setOrigin(0, 0.5))
+
+  }
+
+
+  private drawConcede(rect: Rect): void {
+    this.pill(rect, 'Conceder', COLORS.textDim, COLORS.background, COLORS.zoneLabel, 0.3)
 
   }
 

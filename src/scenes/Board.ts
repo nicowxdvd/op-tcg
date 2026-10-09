@@ -16,6 +16,7 @@ import { DonArea } from '../ui/DonArea'
 import { GameController } from '../ui/GameController'
 import { center, computeLayout, contains, splitLearn } from '../ui/layout'
 import type { BoardLayout, LearnLayout, SideLayout } from '../ui/layout'
+import { drawIcon } from '../ui/icons'
 import { LifeArea } from '../ui/LifeArea'
 import { FanView } from '../ui/FanView'
 import { HandActionDialog } from '../ui/HandActionDialog'
@@ -283,12 +284,12 @@ export class Board extends Phaser.Scene {
     const state   = this.controller.getState()
     const changed = this.lastActive !== null && this.lastActive !== active
     const counter = state.battle?.step === 'counter' ? opponentOf(state.battle.attackerPlayer) : null
-    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL, isRival: true }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF, isRival: false }]
+    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF }]
 
     this.lastActive = active
 
-    for (const { id, side, mock, isRival } of sides)
-      this.layer.add([new PlayerPanel(this, side.panel, isRival, id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
+    for (const { id, side, mock } of sides)
+      this.layer.add([new PlayerPanel(this, side.panel, this.leaderColor(id), id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
 
   }
 
@@ -332,11 +333,13 @@ export class Board extends Phaser.Scene {
     const middle     = center(button)
     const box        = this.add.graphics()
     const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
-    const label      = this.add.text(middle.x, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
+    const label      = this.add.text(middle.x - button.h * 0.2, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
+    const arrow      = this.add.graphics()
 
     box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
+    drawIcon(arrow, 'play', label.x + label.width / 2 + button.h * 0.4, middle.y, button.h * 0.4, COLORS.dialog)
     hit.on('pointerup', () => this.send(pass))
-    this.layer.add([box, label, hit])
+    this.layer.add([box, label, arrow, hit])
 
   }
 
