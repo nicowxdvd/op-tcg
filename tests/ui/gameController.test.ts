@@ -3,6 +3,16 @@ import { createMockController } from '../../src/dev/mockGame'
 import { buildPrompt } from '../../src/ui/prompts'
 import type { PlayerId } from '../../src/engine'
 
+function begin(controller: ReturnType<typeof createMockController>, first: PlayerId = 'p1'): ReturnType<typeof createMockController> {
+  const { rollWinner } = controller.getState()
+
+  controller.dispatch({ type: 'ChooseFirst', player: rollWinner, goFirst: rollWinner === first })
+
+  return controller
+
+}
+
+
 function decider(controller: ReturnType<typeof createMockController>): PlayerId {
   return controller.getLegal('p1').length > 0 ? 'p1' : 'p2'
 
@@ -12,7 +22,7 @@ function decider(controller: ReturnType<typeof createMockController>): PlayerId 
 describe('GameController', () => {
 
   it('dispatch actualiza el estado', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
     const player     = decider(controller)
     const before     = controller.getState()
 
@@ -25,7 +35,7 @@ describe('GameController', () => {
 
 
   it('un error del motor lo propaga y no cambia el estado', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
     const before     = controller.getState()
     const handler    = vi.fn()
 
@@ -39,7 +49,7 @@ describe('GameController', () => {
 
 
   it('los eventos llegan a los suscriptores hasta que se desuscriben', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
     const handler    = vi.fn()
     const off        = controller.on(handler)
     const player     = decider(controller)
@@ -58,7 +68,7 @@ describe('GameController', () => {
 
 
   it('getLegal sale del motor y actor devuelve quien puede jugar', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
     const player     = decider(controller)
 
     expect(controller.actor()).toBe(player)
@@ -77,7 +87,7 @@ describe('GameController', () => {
 
 
   it('pasar de turno cambia el jugador que actua', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
 
     controller.dispatch({ type: 'Mulligan', player: controller.actor(), redraw: false })
     controller.dispatch({ type: 'Mulligan', player: controller.actor(), redraw: false })
@@ -92,7 +102,7 @@ describe('GameController', () => {
 
 
   it('buildPrompt ofrece el mulligan y no ofrece nada en el turno normal', () => {
-    const controller = createMockController(7, { cpu: null })
+    const controller = begin(createMockController(7, { cpu: null }))
     const player     = controller.actor()
     const prompt     = buildPrompt(controller.getState(), controller.getLegal(player), player)
 
@@ -117,7 +127,7 @@ describe('GameController con CPU', () => {
   afterEach(() => { vi.useRealTimers() })
 
   it('isCpu identifica solo al jugador de la IA', () => {
-    const controller = createMockController(7)
+    const controller = begin(createMockController(7))
 
     expect(controller.isCpu('p2')).toBe(true)
     expect(controller.isCpu('p1')).toBe(false)
@@ -128,7 +138,7 @@ describe('GameController con CPU', () => {
 
 
   it('la CPU decide su mulligan tras el delay y no antes', () => {
-    const controller = createMockController(7)
+    const controller = begin(createMockController(7))
 
     controller.dispatch({ type: 'Mulligan', player: 'p1', redraw: false })
 
@@ -143,8 +153,23 @@ describe('GameController con CPU', () => {
   })
 
 
+  it('si la CPU gana el sorteo elige jugar primero tras el delay', () => {
+    const seed = Array.from({ length: 50 }, (_, i) => i).find(n => createMockController(n).getState().rollWinner === 'p2')!
+    const controller = createMockController(seed)
+
+    expect(controller.getState().phase).toBe('startRoll')
+    vi.advanceTimersByTime(3199)
+    expect(controller.getState().phase).toBe('startRoll')
+    vi.advanceTimersByTime(1)
+    expect(controller.getState().phase).toBe('mulligan')
+    expect(controller.getState().first).toBe('p2')
+    controller.dispose()
+
+  })
+
+
   it('tras el turno humano la CPU juega y se detiene cuando decide el humano', () => {
-    const controller = createMockController(7)
+    const controller = begin(createMockController(7))
 
     controller.dispatch({ type: 'Mulligan', player: 'p1', redraw: false })
     vi.advanceTimersByTime(600)
@@ -172,7 +197,7 @@ describe('GameController con CPU', () => {
 
 
   it('dispose cancela los timers pendientes', () => {
-    const controller = createMockController(7)
+    const controller = begin(createMockController(7))
 
     controller.dispose()
     vi.advanceTimersByTime(10000)
@@ -183,7 +208,7 @@ describe('GameController con CPU', () => {
 
 
   it('un error de la CPU detiene el bucle y se propaga sin cambiar el estado', () => {
-    const controller = createMockController(7)
+    const controller = begin(createMockController(7))
 
     controller.dispatch({ type: 'Mulligan', player: 'p1', redraw: false })
 

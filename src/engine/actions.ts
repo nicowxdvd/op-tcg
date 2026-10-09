@@ -1,12 +1,13 @@
 import type { Action, ApplyResult, GameEvent, GameState, PlayerId } from './types'
 import { shuffle } from './rng'
 import { startTurn, endTurn } from './phases'
-import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, requireMain, requireNoBattle } from './state'
+import { HAND_SIZE, MAX_CHARACTERS, mulliganDecider, opponentOf, requireMain, requireNoBattle } from './state'
 import { fireEffects } from './effects'
 import { choose, passChoice } from './effects/choice'
 import { activateEffect } from './effects/activate'
 import { attack, declareBlock, passBlock, useCounter, useCounterEvent, passCounter, revealTrigger, passTrigger } from './battle'
 
+type ChooseFirstAction = Extract<Action, { type: 'ChooseFirst' }>
 type MulliganAction = Extract<Action, { type: 'Mulligan' }>
 type PlayAction     = Extract<Action, { type: 'PlayCharacter' }>
 type EventAction    = Extract<Action, { type: 'PlayEvent' }>
@@ -24,6 +25,19 @@ function placeLife(state: GameState): GameState {
   }
 
   return { ...state, players: { p1: place('p1'), p2: place('p2') }, active: state.first, turn: 1 }
+
+}
+
+
+function chooseFirst(state: GameState, action: ChooseFirstAction): ApplyResult {
+  if (state.phase !== 'startRoll')
+    throw new Error('El orden de juego solo se elige en la fase startRoll')
+  if (action.player !== state.rollWinner)
+    throw new Error(`Le toca elegir a ${state.rollWinner}, no a ${action.player}`)
+
+  const first = action.goFirst ? action.player : opponentOf(action.player)
+
+  return { state: { ...state, first, active: first, phase: 'mulligan' }, events: [{ type: 'FirstChosen', player: action.player, first }] }
 
 }
 
@@ -193,6 +207,8 @@ export function apply(state: GameState, action: Action): ApplyResult {
     throw new Error('Hay una decisión pendiente')
 
   switch (action.type) {
+    case 'ChooseFirst':
+      return chooseFirst(state, action)
     case 'Mulligan':
       return mulligan(state, action)
     case 'PlayCharacter':

@@ -50,6 +50,23 @@ export function requireNoBattle(state: GameState): void {
 }
 
 
+function rollDice(seed: number): { dice: Record<PlayerId, number>; winner: PlayerId; seed: number } {
+  let current = seed
+
+  while (true) {
+    const a = nextInt(current, 6)
+    const b = nextInt(a.seed, 6)
+
+    current = b.seed
+
+    if (a.value !== b.value)
+      return { dice: { p1: a.value + 1, p2: b.value + 1 }, winner: a.value > b.value ? 'p1' : 'p2', seed: current }
+
+  }
+
+}
+
+
 export function mulliganDecider(state: GameState): PlayerId {
   return state.players[state.first].mulliganDone ? opponentOf(state.first) : state.first
 
@@ -99,11 +116,11 @@ export function createGame(config: GameConfig): GameState {
   validateDeck(config.defs, config.decks.p1, 'p1')
   validateDeck(config.defs, config.decks.p2, 'p2')
 
-  const roll  = nextInt(config.seed, 2)
-  const first = roll.value === 0 ? 'p1' : 'p2'
+  const roll  = rollDice(config.seed)
+  const first = roll.winner
   const p1    = buildPlayer('p1', config.decks.p1, roll.seed)
   const p2    = buildPlayer('p2', config.decks.p2, p1.seed)
 
-  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, active: first, turn: 1, phase: 'mulligan', winner: null, battle: null, effects: config.effects ?? {}, pending: null, effectQueue: [], modifiers: [], restrictions: [], oncePerTurnUsed: [] }
+  return { seed: p2.seed, defs: config.defs, players: { p1: p1.state, p2: p2.state }, first, dice: roll.dice, rollWinner: first, active: first, turn: 1, phase: 'startRoll', winner: null, battle: null, effects: config.effects ?? {}, pending: null, effectQueue: [], modifiers: [], restrictions: [], oncePerTurnUsed: [] }
 
 }

@@ -25,6 +25,8 @@ export function nameOf(state: GameState, instanceId: string): string {
 
 export function describeAction(state: GameState, action: Action): string {
   switch (action.type) {
+    case 'ChooseFirst':
+      return action.goFirst ? 'Primero' : 'Segundo'
     case 'Mulligan':
       return action.redraw ? 'Mulligan' : 'Quedarse'
     case 'Choose':

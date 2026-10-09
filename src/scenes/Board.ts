@@ -31,6 +31,7 @@ import { GameLog } from '../ui/GameLog'
 import { describeEvent } from '../learn/describeEvent'
 import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
+import { StartRollDialog } from '../ui/StartRollDialog'
 import type { PromptDetails, PromptOption } from '../ui/PromptDialog'
 import { collectSprites, playEvents } from '../ui/animations'
 import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
@@ -61,7 +62,8 @@ export class Board extends Phaser.Scene {
   private layout!: BoardLayout
   private layer!: Phaser.GameObjects.Container
   private zoom!: CardZoom
-  private dialog: PromptDialog | null = null
+  private dialog: PromptDialog | StartRollDialog | null = null
+  private rollShown = false
   private handDialog: HandActionDialog | null = null
   private selection: HandSelection | null = null
   private hand: FanView | null = null
@@ -99,6 +101,7 @@ export class Board extends Phaser.Scene {
   init(data: { config?: MatchConfig; controller?: GameController; images?: string[]; donImage?: string | null }) {
     this.config     = data.config ?? MOCK_CONFIG
     this.ending     = false
+    this.rollShown  = false
     this.controller = data.controller ?? (data.config ? createController(data.config) : createMockController())
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
@@ -241,7 +244,9 @@ export class Board extends Phaser.Scene {
 
     const prompt = buildPrompt(state, this.legal, this.viewer)
 
-    if (prompt)
+    if (state.phase === 'startRoll')
+      this.showStartRoll()
+    else if (prompt)
       this.showDialog(prompt.title, prompt.options.map(option => ({ label: option.label, run: () => this.send(option.action) })), true, { subtitle: prompt.subtitle, hint: prompt.hint })
     else if (this.inCounterStep())
       this.showCounterPrompt()
@@ -341,7 +346,7 @@ export class Board extends Phaser.Scene {
     const data       = state.players[player]
     const card       = this.layout.card
     const defOf      = (instance: CardInstance) => state.defs[instance.defId]
-    const started    = state.phase !== 'mulligan'
+    const started    = state.phase !== 'mulligan' && state.phase !== 'startRoll'
     const attacks    = new Set(own ? this.legal.flatMap(action => action.type === 'Attack' ? [action.attacker] : []) : [])
     const uses       = new Set(own ? this.legal.flatMap(action => action.type === 'ActivateEffect' ? [action.source] : []) : [])
     const donTargets = new Set(own && this.selectedDon > 0 ? this.legal.flatMap(action => action.type === 'AttachDon' ? [action.target] : []) : [])
@@ -832,6 +837,33 @@ export class Board extends Phaser.Scene {
   private showDialog(title: string, options: PromptOption[], veiled = true, details?: PromptDetails) {
     this.dialog?.destroy()
     this.dialog = new PromptDialog(this, { w: this.layout.width, h: this.layout.height }, title, options, veiled, details)
+    this.add.existing(this.dialog)
+
+  }
+
+
+  private showStartRoll() {
+    const state    = this.controller.getState()
+    const cpu      = this.config.mode === 'cpu'
+    const rival    = opponentOf(this.viewer)
+    const leader   = (player: PlayerId) => ({ defId: state.players[player].leader.defId, name: state.defs[state.players[player].leader.defId].name, color: state.defs[state.players[player].leader.defId].colors[0] })
+    const labels   = cpu ? { [this.viewer]: 'Tú', [rival]: 'CPU' } as Record<PlayerId, string> : { p1: 'Jugador 1', p2: 'Jugador 2' }
+    const winner   = state.rollWinner
+    const headline = !cpu ? `${labels[winner]} ganó el sorteo` : winner === this.viewer ? '¡Ganaste el sorteo!' : 'La CPU ganó el sorteo'
+    const animate  = !this.rollShown
+
+    this.rollShown = true
+    this.dialog?.destroy()
+    this.dialog = new StartRollDialog(this, { w: this.layout.width, h: this.layout.height }, {
+      leaders: { p1: leader('p1'), p2: leader('p2') },
+      labels,
+      dice: state.dice,
+      winner,
+      headline,
+      canChoose: this.legal.some(action => action.type === 'ChooseFirst'),
+      animate,
+      onChoose: goFirst => this.send({ type: 'ChooseFirst', player: this.viewer, goFirst })
+    })
     this.add.existing(this.dialog)
 
   }
