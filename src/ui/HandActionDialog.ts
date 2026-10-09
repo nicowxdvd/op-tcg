@@ -20,8 +20,8 @@ export class HandActionDialog extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, screen: Size, anchor: Point, name: string, actions: HandAction[], handlers: HandActionHandlers) {
     super(scene, 0, 0)
 
-    const unit      = Math.max(0.8, screen.h / 720)
-    const width     = 260 * unit
+    const unit      = Math.max(0.8, screen.h / 720) * 0.8
+    const width     = 210 * unit
     const pad       = 12 * unit
     const gap       = 8 * unit
     const row       = 36 * unit
@@ -51,16 +51,16 @@ export class HandActionDialog extends Phaser.GameObjects.Container {
 
     this.bounds = { x, y, w: width, h: height + tail }
 
-    panel.fillStyle(COLORS.dialog, 0.97).fillRoundedRect(x, y, width, height, RADIUS.panel)
+    panel.fillStyle(COLORS.black, 1).fillRoundedRect(x, y, width, height, RADIUS.panel)
     panel.fillTriangle(tailX - tail, y + height - 1, tailX + tail, y + height - 1, tailX, y + height + tail)
-    panel.lineStyle(1.5, COLORS.zoneBorder, 0.6).strokeRoundedRect(x, y, width, height, RADIUS.panel)
+    panel.lineStyle(1.5, COLORS.white, 1).strokeRoundedRect(x, y, width, height, RADIUS.panel)
     panel.lineBetween(tailX - tail, y + height, tailX, y + height + tail)
     panel.lineBetween(tailX + tail, y + height, tailX, y + height + tail)
-    panel.lineStyle(2, COLORS.dialog, 1).lineBetween(tailX - tail + 1, y + height, tailX + tail - 1, y + height)
+    panel.lineStyle(2, COLORS.black, 1).lineBetween(tailX - tail + 1, y + height, tailX + tail - 1, y + height)
     title.setPosition(x + pad, y + pad + titleH / 2)
     this.add([panel, title])
 
-    this.addIconButton(x + width - pad - infoSize / 2, y + pad + titleH / 2, infoSize, infoSize, 'info', null, COLORS.text, handlers.info)
+    this.addIconButton(x + width - pad - infoSize / 2, y + pad + titleH / 2, infoSize, infoSize, 'info', null, handlers.info, false)
 
     const squareX = x + width - pad - row / 2
     const wideW   = width - 2 * pad - row - gap
@@ -70,11 +70,11 @@ export class HandActionDialog extends Phaser.GameObjects.Container {
       const centerY = rowsY + i * (row + gap) + row / 2
       const label   = actions.length === 1 ? null : action.label
 
-      this.addIconButton(x + pad + wideW / 2, centerY, wideW, row, 'check', label, COLORS.dialog, () => handlers.run(action), COLORS.gold)
+      this.addIconButton(x + pad + wideW / 2, centerY, wideW, row, 'check', label, () => handlers.run(action))
 
     })
 
-    this.addIconButton(squareX, rowsY + row / 2, row, row, 'close', null, COLORS.text, handlers.close, COLORS.buttonDark)
+    this.addIconButton(squareX, rowsY + row / 2, row, row, 'close', null, handlers.close)
 
   }
 
@@ -87,28 +87,28 @@ export class HandActionDialog extends Phaser.GameObjects.Container {
   }
 
 
-  private addIconButton(cx: number, cy: number, w: number, h: number, icon: IconKind, label: string | null, color: number, onClick: () => void, fill: number | null = null): void {
+  private addIconButton(cx: number, cy: number, w: number, h: number, icon: IconKind, label: string | null, onClick: () => void, framed = true): void {
     const face = this.scene.add.graphics()
     const hit  = this.scene.add.rectangle(cx, cy, w, h, COLORS.white, 0).setInteractive({ useHandCursor: true })
-    const draw = (alpha: number) => {
+    const draw = (fill: number) => {
       face.clear()
 
-      if (fill !== null)
-        face.fillStyle(fill, alpha).fillRoundedRect(cx - w / 2, cy - h / 2, w, h, RADIUS.button)
+      if (framed)
+        face.fillStyle(fill, 1).fillRoundedRect(cx - w / 2, cy - h / 2, w, h, RADIUS.button).lineStyle(1.5, COLORS.white, 1).strokeRoundedRect(cx - w / 2, cy - h / 2, w, h, RADIUS.button)
 
       if (label === null)
-        drawIcon(face, icon, cx, cy, Math.min(w, h) * 0.55, color)
+        drawIcon(face, icon, cx, cy, Math.min(w, h) * 0.55, COLORS.white)
 
     }
 
-    draw(1)
-    hit.on('pointerover', () => draw(0.85))
-    hit.on('pointerout', () => draw(1))
+    draw(COLORS.black)
+    hit.on('pointerover', () => draw(COLORS.buttonDark))
+    hit.on('pointerout', () => draw(COLORS.black))
     hit.on('pointerup', onClick)
     this.add([face, hit])
 
     if (label !== null)
-      this.add(this.scene.add.text(cx, cy, label, { ...textStyle(h * 0.38, color), align: 'center', wordWrap: { width: w - 12 } }).setOrigin(0.5))
+      this.add(this.scene.add.text(cx, cy, label, { ...textStyle(h * 0.38, COLORS.white), align: 'center', wordWrap: { width: w - 12 } }).setOrigin(0.5))
 
   }
 
