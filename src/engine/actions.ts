@@ -14,6 +14,7 @@ type EventAction    = Extract<Action, { type: 'PlayEvent' }>
 type StageAction    = Extract<Action, { type: 'PlayStage' }>
 type AttachAction   = Extract<Action, { type: 'AttachDon' }>
 type PassAction     = Extract<Action, { type: 'PassPhase' }>
+type ConcedeAction  = Extract<Action, { type: 'Concede' }>
 
 function placeLife(state: GameState): GameState {
   const place = (player: PlayerId) => {
@@ -202,7 +203,21 @@ function attachDon(state: GameState, action: AttachAction): ApplyResult {
 }
 
 
+function concede(state: GameState, action: ConcedeAction): ApplyResult {
+  if (state.phase === 'gameOver')
+    throw new Error('La partida ya terminó')
+
+  const winner = opponentOf(action.player)
+
+  return { state: { ...state, phase: 'gameOver', winner, conceded: true, battle: null, pending: null, effectQueue: [] }, events: [{ type: 'GameOver', winner }] }
+
+}
+
+
 export function apply(state: GameState, action: Action): ApplyResult {
+  if (action.type === 'Concede')
+    return concede(state, action)
+
   if (state.pending && action.type !== 'Choose' && action.type !== 'PassChoice')
     throw new Error('Hay una decisión pendiente')
 

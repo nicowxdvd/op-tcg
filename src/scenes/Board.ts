@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createController } from '../app/createController'
+import { rematchConfig } from '../app/gameConfig'
 import type { MatchConfig } from '../app/gameConfig'
 import { gameResult } from '../app/gameResult'
 import { soundsFor } from '../app/sounds'
@@ -301,7 +302,7 @@ export class Board extends Phaser.Scene {
 
     const info = this.learnOpen ? describePhase(state, this.viewer) : null
 
-    this.layer.add(new SidePanel(this, this.layout, { header: phaseLabel(state), banner: instructionFor(state, this.legal, this.viewer), notice: this.notice, log: this.log.visible(), learn: this.logArea, info, onToggleLearn: () => this.toggleLearn(), onFullscreen: () => this.toggleFullscreen() }))
+    this.layer.add(new SidePanel(this, this.layout, { header: phaseLabel(state), banner: instructionFor(state, this.legal, this.viewer), notice: this.notice, log: this.log.visible(), learn: this.logArea, info, onToggleLearn: () => this.toggleLearn(), onFullscreen: () => this.toggleFullscreen(), onRestart: () => this.confirm('¿Reiniciar la partida?', () => this.restart()), onConcede: () => this.confirm('¿Conceder la partida?', () => this.send({ type: 'Concede', player: this.viewer })), onMute: () => this.toggleMute(), muted: audio.isMuted() }))
 
   }
 
@@ -310,6 +311,25 @@ export class Board extends Phaser.Scene {
     this.learnOpen = !this.learnOpen
     savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
+
+  }
+
+
+  private confirm(title: string, run: () => void) {
+    this.showDialog(title, [{ label: 'Sí', run }, { label: 'Cancelar', run: () => this.closeDialog() }])
+
+  }
+
+
+  private restart() {
+    goTo(this, 'Board', { config: rematchConfig(this.config), images: this.images, donImage: this.donImage })
+
+  }
+
+
+  private toggleMute() {
+    audio.toggleMute()
+    this.dirty = true
 
   }
 
