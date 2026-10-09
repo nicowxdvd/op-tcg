@@ -1,15 +1,13 @@
 export const COLORS = {
   background:   0x070b16,
-  panelRival:   0x0f2547,
-  panelSelf:    0x1b2433,
-  frameRival:   0x2a4a7a,
-  frameSelf:    0x3a465a,
   zoneBorder:   0x6f86ad,
   zoneFill:     0x0b1630,
   zoneLabel:    0x7d8fb0,
   gold:         0xf6c026,
   crimson:      0xa3123a,
   crimsonDark:  0x6e1030,
+  banner:       0x1f5a96,
+  pill:         0x1a2232,
   lifeText:     0xe0405f,
   nameBlue:     0x4db3ff,
   white:        0xffffff,
@@ -55,6 +53,20 @@ export function css(color: number): string {
 
 export function cssAlpha(color: number, alpha: number): string {
   return `${css(color)}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
+
+}
+
+
+export function mix(from: number, to: number, amount: number): number {
+  const channel = (shift: number) => Math.round(((from >> shift) & 0xff) * (1 - amount) + ((to >> shift) & 0xff) * amount)
+
+  return (channel(16) << 16) | (channel(8) << 8) | channel(0)
+
+}
+
+
+export function panelTint(color: number): { fill: number; frame: number } {
+  return { fill: mix(COLORS.background, color, 0.22), frame: mix(COLORS.background, color, 0.6) }
 
 }
 
