@@ -34,11 +34,13 @@ export class Boot extends Phaser.Scene {
     const images   = await findCardImages(Object.keys(loadDefs()), fraction => this.progress(fraction * SEARCH_SHARE))
     const donImage = await findDonImage()
 
+    await Promise.all(['400 16px Outfit', '700 16px Outfit', '400 16px Fraunces'].map(font => document.fonts.load(font))).catch(() => {})
+
     this.label.setText('Cargando imágenes...')
     preloadCardImages(this, images)
     preloadDonImage(this, donImage)
     this.load.on('progress', (fraction: number) => this.progress(SEARCH_SHARE + fraction * (1 - SEARCH_SHARE)))
-    this.load.once('complete', () => goTo(this, import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock') ? 'Board' : 'Menu', { images, donImage }))
+    this.load.once('complete', () => goTo(this, import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock') ? 'Board' : 'Lobby', { images, donImage }))
     this.load.start()
 
   }

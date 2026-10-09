@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildGame, matchError, rematchConfig } from '../../src/app/gameConfig'
 import type { MatchConfig } from '../../src/app/gameConfig'
 
-const VALID: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 7 }
+const VALID: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 7, difficulty: 'normal' }
 
 describe('gameConfig', () => {
   it('buildGame crea la partida con los mazos elegidos', () => {

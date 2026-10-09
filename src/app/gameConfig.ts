@@ -1,3 +1,4 @@
+import type { Difficulty } from '../ai'
 import type { GameState } from '../engine'
 import type { PlayerId } from '../engine/types'
 import { createGame } from '../engine'
@@ -7,6 +8,7 @@ export interface MatchConfig {
   mode: 'cpu' | 'hotseat'
   decks: Record<PlayerId, string>
   seed: number
+  difficulty: Difficulty
 
 }
 
