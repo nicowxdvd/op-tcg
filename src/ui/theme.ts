@@ -13,6 +13,7 @@ export const COLORS = {
   lifeText:     0xe0405f,
   nameBlue:     0x4db3ff,
   white:        0xffffff,
+  black:        0x000000,
   text:         0xe8edf7,
   textDim:      0x8fa0bf,
   buttonDark:   0x2b3345,
