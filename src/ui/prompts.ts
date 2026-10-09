@@ -9,16 +9,32 @@ export interface PromptSpec {
 }
 
 
-export function nameOf(state: GameState, instanceId: string): string {
+function findCard(state: GameState, instanceId: string) {
   for (const id of ['p1', 'p2'] as const) {
     const player = state.players[id]
     const found  = [player.leader, ...player.hand, ...player.deck, ...player.life, ...player.trash, ...player.characters.map(character => character.card), ...(player.stage ? [player.stage] : [])].find(card => card.instanceId === instanceId)
 
     if (found)
-      return state.defs[found.defId].name
+      return found
   }
 
-  return instanceId
+  return null
+
+}
+
+
+export function nameOf(state: GameState, instanceId: string): string {
+  const found = findCard(state, instanceId)
+
+  return found ? state.defs[found.defId].name : instanceId
+
+}
+
+
+export function codeOf(state: GameState, instanceId: string): string {
+  const found = findCard(state, instanceId)
+
+  return found ? state.defs[found.defId].id : instanceId
 
 }
 
