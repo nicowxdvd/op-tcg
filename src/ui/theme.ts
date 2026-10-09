@@ -26,8 +26,10 @@ export const COLORS = {
   attack:       0xff5a47,
   activate:     0x5ec8ff,
   rest:         0x1b2b4d,
-  indicatorRival: 0x3b82f6,
+  indicatorHuman: 0x3b82f6,
+  indicatorCpu:   0x22c55e,
   indicatorSelf:  0xcbd5e1,
+  clockRunning:   0xf59e0b,
   statGold:     0xffe082
 } as const
 
