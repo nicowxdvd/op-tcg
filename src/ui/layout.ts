@@ -50,6 +50,7 @@ export interface BoardLayout {
   zoom: Rect
   button: Rect
   report: Rect
+  concede: Rect
 
 }
 
@@ -134,16 +135,17 @@ export function computeLayout(width: number, height: number): BoardLayout {
   const rivalPanel  = turn(selfPanel)
   const self: SideLayout  = { panel: selfPanel, badge: { x: cx + margin, y: selfBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: selfBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: cx + margin, y: height - margin - handH, w: gutter - 2 * margin + handCard.w, h: handH }, ...zones }
   const rival: SideLayout = { panel: rivalPanel, badge: { x: cx + margin, y: rivalBadgeY, w: badgeW, h: badgeH }, clock: { x: cx + margin, y: rivalBadgeY + badgeH + margin / 2, w: clockW, h: clockH }, hand: { x: sideX, y: margin, w: sideW, h: rivalHandH }, life: turn(zones.life), leader: turn(zones.leader), stage: turn(zones.stage), don: turn(zones.don), donDeck: turn(zones.donDeck), deck: turn(zones.deck), trash: turn(zones.trash), characters: turn(zones.characters), slots: zones.slots.map(turn).reverse() }
-  const status      = { x: sideX, y: margin + rivalHandH + margin, w: sideW, h: height * 0.095 }
+  const status      = { x: sideX, y: margin + rivalHandH + margin, w: sideW, h: height * 0.15 }
   const banner      = { x: sideX, y: status.y + status.h + margin, w: sideW, h: height * 0.12 }
-  const report      = { x: sideX, y: height - margin - height * 0.05, w: sideW, h: height * 0.05 }
+  const report      = { x: sideX, y: height - margin - height * 0.05, w: sideW * 0.7, h: height * 0.05 }
+  const concede     = { x: sideX + sideW * 0.7 + margin / 2, y: report.y, w: sideW * 0.3 - margin / 2, h: report.h }
   const button      = { x: sideX, y: report.y - margin - height * 0.055, w: sideW, h: height * 0.055 }
   const logY        = banner.y + banner.h + margin
   const log         = { x: sideX, y: logY, w: sideW, h: button.y - margin - logY }
   const zoomH       = height * 0.62
   const zoom        = { x: cx + margin, y: margin, w: zoomH * CARD_RATIO, h: zoomH }
 
-  return { width, height, content: { x: cx, y: 0, w: cw, h: height }, card, handCard, self, rival, fullscreen, status, banner, log, zoom, button, report }
+  return { width, height, content: { x: cx, y: 0, w: cw, h: height }, card, handCard, self, rival, fullscreen, status, banner, log, zoom, button, report, concede }
 
 }
 
@@ -170,7 +172,7 @@ export function sideRects(side: SideLayout): Rect[] {
 
 
 export function allRects(layout: BoardLayout): Rect[] {
-  return [...sideRects(layout.self), ...sideRects(layout.rival), layout.fullscreen, layout.status, layout.banner, layout.button, layout.report]
+  return [...sideRects(layout.self), ...sideRects(layout.rival), layout.fullscreen, layout.status, layout.banner, layout.button, layout.report, layout.concede]
 
 }
 
