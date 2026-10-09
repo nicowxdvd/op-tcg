@@ -390,6 +390,21 @@ export class Board extends Phaser.Scene {
       if (zone.sprite)
         this.wireZoom(zone.sprite)
 
+    if (stage.sprite && data.stage && uses.has(data.stage.instanceId)) {
+      const stageId = data.stage.instanceId
+
+      stage.sprite.setHighlight(ACTIVATE)
+      stage.sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+        if (pointer.leftButtonDown())
+          this.beginPress(stageId, stageId, false)
+
+      })
+
+      if (this.activating === stageId)
+        this.drawActivateButton(stage.sprite, stageId)
+
+    }
+
     place(side.leader, data.leader, { rested: data.leaderRested, don: data.leaderAttachedDon }, 'leader')
 
     data.characters.forEach((character, i) => {
