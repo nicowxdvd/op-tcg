@@ -8,9 +8,10 @@ export interface PhaseText {
 
 export type BattleStep = 'block' | 'counter' | 'trigger'
 
-export const PHASE_NAMES: Record<Phase, string> = { mulligan: 'Mulligan', refresh: 'Refresh', draw: 'Draw', don: 'DON!!', main: 'Main', end: 'End', gameOver: 'Fin' }
+export const PHASE_NAMES: Record<Phase, string> = { startRoll: 'Sorteo', mulligan: 'Mulligan', refresh: 'Refresh', draw: 'Draw', don: 'DON!!', main: 'Main', end: 'End', gameOver: 'Fin' }
 
 export const PHASE_TEXTS: Record<Phase, PhaseText> = {
+  startRoll: { title: 'Sorteo', explanation: 'Cada jugador lanza un dado. Quien saca el número más alto elige si juega primero o segundo.' },
   mulligan: { title: 'Mulligan', explanation: 'Puedes quedarte con tu mano de 5 cartas o rebarajarla una sola vez para robar otras 5.' },
   refresh: { title: 'Refresh', explanation: 'Los DON!! adjuntos vuelven al área de costo y todas tus cartas se ponen activas.' },
   draw: { title: 'Draw', explanation: 'Robas 1 carta del mazo. Si no te quedan cartas para robar, pierdes la partida.' },

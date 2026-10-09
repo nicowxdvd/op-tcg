@@ -13,8 +13,9 @@ const LEADER = 'p1-leader'
 
 function stage(mine: Partial<PlayerState> = {}, rival: Partial<PlayerState> = {}): GameState {
   const created = createGame({ seed: 5, defs, effects: effectRegistry, decks: { p1: loadDeck('st01'), p2: loadDeck('st02') } })
-  const decided = apply(created, { type: 'Mulligan', player: created.first, redraw: false }).state
-  const started = apply(decided, { type: 'Mulligan', player: other(created.first), redraw: false }).state
+  const chosen  = apply(created, { type: 'ChooseFirst', player: created.rollWinner, goFirst: true }).state
+  const decided = apply(chosen, { type: 'Mulligan', player: chosen.first, redraw: false }).state
+  const started = apply(decided, { type: 'Mulligan', player: other(chosen.first), redraw: false }).state
   const base    = withPlayer({ ...started, turn: 3, active: 'p1', phase: 'main' }, 'p1', { characters: [], hand: [], donActive: 0, donRested: 0, ...mine })
 
   return withPlayer(base, 'p2', { characters: [], hand: [], donActive: 0, donRested: 0, ...rival })

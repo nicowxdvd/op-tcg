@@ -61,6 +61,8 @@ export function getLegalActions(state: GameState, playerId: PlayerId): Action[] 
   if (state.pending)
     return state.pending.player === playerId ? [...state.pending.options.map((option): Action => ({ type: 'Choose', player: playerId, option })), ...(state.pending.optional ? [{ type: 'PassChoice', player: playerId } as Action] : [])] : []
 
+  if (state.phase === 'startRoll')
+    return state.rollWinner === playerId ? [{ type: 'ChooseFirst', player: playerId, goFirst: true }, { type: 'ChooseFirst', player: playerId, goFirst: false }] : []
   if (state.phase === 'mulligan')
     return mulliganDecider(state) === playerId ? [{ type: 'Mulligan', player: playerId, redraw: false }, { type: 'Mulligan', player: playerId, redraw: true }] : []
   if (state.phase !== 'main')

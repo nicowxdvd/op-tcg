@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
+import { getLegalActions } from '../../src/engine/queries'
 import { createGame, type GameConfig } from '../../src/engine/state'
 import { buildDeck, buildDeckWith, defs, FOREIGN_ID, LEADER_ID, OTHER_LEADER_ID } from './fixtures'
 
 function makeConfig(seed = 1, p1Cards = buildDeck(), p2Cards = buildDeck()): GameConfig {
   return { seed, defs, decks: { p1: { leader: LEADER_ID, cards: p1Cards }, p2: { leader: LEADER_ID, cards: p2Cards } } }
+
+}
+
+
+function chosen(config: GameConfig) {
+  const state = createGame(config)
+
+  return apply(state, { type: 'ChooseFirst', player: state.rollWinner, goFirst: true }).state
 
 }
 
@@ -86,10 +95,10 @@ describe('createGame: validación de mazos', () => {
 
 describe('createGame: estado inicial', () => {
 
-  it('deja la partida en fase mulligan, turno 1 y sin ganador', () => {
+  it('deja la partida en fase startRoll, turno 1 y sin ganador', () => {
     const state = createGame(makeConfig())
 
-    expect(state.phase).toBe('mulligan')
+    expect(state.phase).toBe('startRoll')
     expect(state.turn).toBe(1)
     expect(state.winner).toBeNull()
     expect(state.active).toBe(state.first)
@@ -143,6 +152,7 @@ describe('createGame: estado inicial', () => {
     const b = createGame(makeConfig(77))
 
     expect(a.first).toBe(b.first)
+    expect(a.dice).toEqual(b.dice)
     expect(a.players.p1.hand).toEqual(b.players.p1.hand)
     expect(a.players.p2.hand).toEqual(b.players.p2.hand)
     expect(a).toEqual(b)
@@ -152,7 +162,7 @@ describe('createGame: estado inicial', () => {
 
   it('con seeds distintas aparecen ambos primeros jugadores y manos distintas', () => {
     const states = Array.from({ length: 20 }, (_, seed) => createGame(makeConfig(seed)))
-    const firsts = new Set(states.map(state => state.first))
+    const firsts = new Set(states.map(state => state.rollWinner))
     const hands  = new Set(states.map(state => state.players.p1.hand.map(card => card.instanceId).join()))
 
     expect(firsts).toEqual(new Set(['p1', 'p2']))
@@ -185,11 +195,68 @@ describe('createGame: estado inicial', () => {
 })
 
 
+describe('sorteo de inicio', () => {
+
+  it('lanza un dado de 1 a 6 por jugador, distintos, y gana el mayor', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const state = createGame(makeConfig(seed))
+      const { p1, p2 } = state.dice
+
+      expect(p1).toBeGreaterThanOrEqual(1)
+      expect(p1).toBeLessThanOrEqual(6)
+      expect(p2).toBeGreaterThanOrEqual(1)
+      expect(p2).toBeLessThanOrEqual(6)
+      expect(p1).not.toBe(p2)
+      expect(state.rollWinner).toBe(p1 > p2 ? 'p1' : 'p2')
+    }
+
+  })
+
+
+  it('solo el ganador tiene acciones legales y puede elegir', () => {
+    const state = createGame(makeConfig(5))
+    const loser = state.rollWinner === 'p1' ? 'p2' : 'p1'
+
+    expect(getLegalActions(state, state.rollWinner).map(action => action.type)).toEqual(['ChooseFirst', 'ChooseFirst'])
+    expect(getLegalActions(state, loser)).toEqual([])
+    expect(() => apply(state, { type: 'ChooseFirst', player: loser, goFirst: true })).toThrow(/Le toca elegir/)
+
+  })
+
+
+  it('elegir primero o segundo fija quién empieza y pasa a mulligan', () => {
+    const state  = createGame(makeConfig(5))
+    const winner = state.rollWinner
+    const loser  = winner === 'p1' ? 'p2' : 'p1'
+    const first  = apply(state, { type: 'ChooseFirst', player: winner, goFirst: true })
+    const second = apply(state, { type: 'ChooseFirst', player: winner, goFirst: false })
+
+    expect(first.state.first).toBe(winner)
+    expect(first.state.active).toBe(winner)
+    expect(first.state.phase).toBe('mulligan')
+    expect(first.events).toEqual([{ type: 'FirstChosen', player: winner, first: winner }])
+    expect(second.state.first).toBe(loser)
+    expect(second.state.active).toBe(loser)
+    expect(second.events).toEqual([{ type: 'FirstChosen', player: winner, first: loser }])
+
+  })
+
+
+  it('rechaza elegir fuera de la fase startRoll', () => {
+    const state = chosen(makeConfig(5))
+
+    expect(() => apply(state, { type: 'ChooseFirst', player: state.rollWinner, goFirst: true })).toThrow(/startRoll/)
+
+  })
+
+})
+
+
 describe('mulligan', () => {
   const ids = (cards: { instanceId: string }[]) => cards.map(card => card.instanceId)
 
   it('conservar deja la mano igual y marca la decisión', () => {
-    const state  = createGame(makeConfig(5))
+    const state  = chosen(makeConfig(5))
     const result = apply(state, { type: 'Mulligan', player: state.first, redraw: false })
     const player = result.state.players[state.first]
 
@@ -202,7 +269,7 @@ describe('mulligan', () => {
 
 
   it('rehacer devuelve la mano, baraja y roba 5 sin perder cartas', () => {
-    const state  = createGame(makeConfig(5))
+    const state  = chosen(makeConfig(5))
     const before = state.players[state.first]
     const result = apply(state, { type: 'Mulligan', player: state.first, redraw: true })
     const after  = result.state.players[state.first]
@@ -217,7 +284,7 @@ describe('mulligan', () => {
 
 
   it('decide primero el primer jugador y después el rival', () => {
-    const state  = createGame(makeConfig(5))
+    const state  = chosen(makeConfig(5))
     const second = state.first === 'p1' ? 'p2' : 'p1'
 
     expect(() => apply(state, { type: 'Mulligan', player: second, redraw: false })).toThrow(/Le toca decidir/)
@@ -231,7 +298,7 @@ describe('mulligan', () => {
 
 
   it('rechaza el mulligan fuera de la fase mulligan', () => {
-    const state = createGame(makeConfig(5))
+    const state = chosen(makeConfig(5))
     const first = apply(state, { type: 'Mulligan', player: state.first, redraw: false }).state
     const done  = apply(first, { type: 'Mulligan', player: state.first === 'p1' ? 'p2' : 'p1', redraw: true }).state
 
@@ -241,7 +308,7 @@ describe('mulligan', () => {
 
 
   it('al decidir ambos coloca Life igual a leader.life y empieza el turno 1', () => {
-    const state  = createGame(makeConfig(9))
+    const state  = chosen(makeConfig(9))
     const second = state.first === 'p1' ? 'p2' : 'p1'
     const first  = apply(state, { type: 'Mulligan', player: state.first, redraw: true }).state
     const result = apply(first, { type: 'Mulligan', player: second, redraw: false })
@@ -261,7 +328,7 @@ describe('mulligan', () => {
 
 
   it('la Life sale del tope del mazo y no repite cartas', () => {
-    const state  = createGame(makeConfig(9))
+    const state  = chosen(makeConfig(9))
     const second = state.first === 'p1' ? 'p2' : 'p1'
     const first  = apply(state, { type: 'Mulligan', player: state.first, redraw: false }).state
     const result = apply(first, { type: 'Mulligan', player: second, redraw: false }).state
@@ -275,7 +342,7 @@ describe('mulligan', () => {
 
 
   it('no muta el estado recibido', () => {
-    const state = createGame(makeConfig(5))
+    const state = chosen(makeConfig(5))
     const copy  = structuredClone(state)
 
     apply(state, { type: 'Mulligan', player: state.first, redraw: true })

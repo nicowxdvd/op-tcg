@@ -127,6 +127,8 @@ export function chooseAction(state: GameState, player: PlayerId, rng: Rng): Acti
     throw new Error(`La IA no tiene acciones legales (${summary(state, player)})`)
   if (state.pending)
     return chooseOption(state, player, legal, rng)
+  if (state.phase === 'startRoll')
+    return legal.find(action => action.type === 'ChooseFirst' && action.goFirst) ?? legal[0]
   if (state.phase === 'mulligan')
     return legal.find(action => action.type === 'Mulligan' && action.redraw === shouldRedraw(state, player)) ?? legal[0]
   if (state.battle)

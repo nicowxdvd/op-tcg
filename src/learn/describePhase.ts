@@ -27,6 +27,8 @@ function describeActions(state: GameState, player: PlayerId, legal: Action[]): s
   const of      = (type: Action['type']) => legal.filter(action => action.type === type)
   const idsOf   = (type: Action['type']) => ids(of(type), action => 'instanceId' in action ? action.instanceId : null)
   const lines: [boolean, string][] = [
+    [of('ChooseFirst').some(action => action.type === 'ChooseFirst' && action.goFirst), 'Jugar primero'],
+    [of('ChooseFirst').some(action => action.type === 'ChooseFirst' && !action.goFirst), 'Jugar segundo'],
     [of('Mulligan').some(action => action.type === 'Mulligan' && !action.redraw), 'Quedarte con tu mano'],
     [of('Mulligan').some(action => action.type === 'Mulligan' && action.redraw), 'Rebarajar tu mano'],
     [of('PlayCharacter').length > 0, `Jugar un Character: ${names(state, player, idsOf('PlayCharacter'))}`],

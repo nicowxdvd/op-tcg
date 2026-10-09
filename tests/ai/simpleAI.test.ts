@@ -31,8 +31,16 @@ function attacked(life: number, characters: string[] = []): { state: GameState; 
 
 describe('chooseAction', () => {
 
+  it('wins the roll and chooses to go first', () => {
+    const rolled = createGame({ seed: 5, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+
+    expect(chooseAction(rolled, rolled.rollWinner, 1)).toEqual({ type: 'ChooseFirst', player: rolled.rollWinner, goFirst: true })
+
+  })
+
   it('mulligans only when there are no cheap Characters', () => {
-    const created = createGame({ seed: 5, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+    const rolled  = createGame({ seed: 5, defs, decks: { p1: { leader: LEADER_ID, cards: buildDeck() }, p2: { leader: LEADER_ID, cards: buildDeck() } } })
+    const created = apply(rolled, { type: 'ChooseFirst', player: rolled.rollWinner, goFirst: true }).state
     const decider = created.first
     const bad     = withPlayer(created, decider, { hand: [card(decider, LEADER_ID, 1)] })
 

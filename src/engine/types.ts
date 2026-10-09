@@ -1,6 +1,6 @@
 export type PlayerId = 'p1' | 'p2'
 
-export type Phase = 'mulligan' | 'refresh' | 'draw' | 'don' | 'main' | 'end' | 'gameOver'
+export type Phase = 'startRoll' | 'mulligan' | 'refresh' | 'draw' | 'don' | 'main' | 'end' | 'gameOver'
 
 export type CardType = 'Leader' | 'Character' | 'Event' | 'Stage'
 
@@ -169,6 +169,8 @@ export interface GameState {
   defs: Record<string, CardDef>
   players: Record<PlayerId, PlayerState>
   first: PlayerId
+  dice: Record<PlayerId, number>
+  rollWinner: PlayerId
   active: PlayerId
   turn: number
   phase: Phase
@@ -184,6 +186,7 @@ export interface GameState {
 }
 
 export type Action =
+  | { type: 'ChooseFirst'; player: PlayerId; goFirst: boolean }
   | { type: 'Mulligan'; player: PlayerId; redraw: boolean }
   | { type: 'PlayCharacter'; player: PlayerId; instanceId: string; replaceId?: string }
   | { type: 'PlayEvent'; player: PlayerId; instanceId: string }
@@ -203,6 +206,7 @@ export type Action =
   | { type: 'PassChoice'; player: PlayerId }
 
 export type GameEvent =
+  | { type: 'FirstChosen'; player: PlayerId; first: PlayerId }
   | { type: 'MulliganDecided'; player: PlayerId; redraw: boolean }
   | { type: 'GameStarted'; first: PlayerId }
   | { type: 'PhaseChanged'; phase: Phase; turn: number; active: PlayerId }
