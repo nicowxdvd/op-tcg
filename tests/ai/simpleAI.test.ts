@@ -3,7 +3,7 @@ import { chooseAction } from '../../src/ai'
 import { apply } from '../../src/engine/actions'
 import { getLegalActions } from '../../src/engine'
 import { createGame } from '../../src/engine/state'
-import { BLOCKER_ID, buildDeck, COUNTER_1K_ID, defs, FOREIGN_ID, LEADER_ID, NO_COUNTER_ID } from '../engine/fixtures'
+import { BLOCKER_ID, buildDeck, COUNTER_1K_ID, COUNTER_2K_ID, defs, FOREIGN_ID, LEADER_ID, NO_COUNTER_ID } from '../engine/fixtures'
 import { card, inPlay, other, startGame, withPlayer } from '../engine/helpers'
 import type { GameState } from '../../src/engine/types'
 
@@ -68,6 +68,30 @@ describe('chooseAction', () => {
     expect(chooseAction(state, state.active, 1)).toEqual({ type: 'PassPhase', player: state.active })
 
   })
+
+  it('only attacks a Leader that can counter when the power beats the known hand', () => {
+    const base  = mainState()
+    const rival = other(base.active)
+    const armed = withPlayer(base, rival, { hand: [card(rival, COUNTER_2K_ID, 1), card(rival, COUNTER_2K_ID, 2)] })
+    const state = withPlayer(armed, base.active, { hand: [], donActive: 2 })
+    const spent = withPlayer(apply(state, chooseAction(state, state.active, 1)).state, state.active, { donActive: 0 })
+
+    expect(chooseAction(spent, state.active, 1, 'normal')).toMatchObject({ type: 'Attack', target: 'leader' })
+    expect(chooseAction(spent, state.active, 1, 'experto')).toEqual({ type: 'PassPhase', player: state.active })
+
+  })
+
+
+  it('protects valuable Characters with a Counter only above normal difficulty', () => {
+    const { state, defender } = attacked(5)
+    const costly              = withPlayer({ ...state, defs: { ...state.defs, [NO_COUNTER_ID]: { ...state.defs[NO_COUNTER_ID], cost: 5 } } }, defender, { characters: [inPlay(card(defender, NO_COUNTER_ID, 90))], hand: [card(defender, COUNTER_2K_ID, 91), card(defender, COUNTER_2K_ID, 92)] })
+    const targeted            = apply({ ...costly, battle: { ...costly.battle!, target: `${defender}-t90` } }, { type: 'PassBlock', player: defender }).state
+
+    expect(chooseAction(targeted, defender, 1, 'normal')).toEqual({ type: 'PassCounter', player: defender })
+    expect(chooseAction(targeted, defender, 1, 'dificil')).toMatchObject({ type: 'UseCounter' })
+
+  })
+
 
   it('reveals a Trigger when it is available', () => {
     const start    = startGame()

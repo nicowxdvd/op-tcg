@@ -10,7 +10,7 @@ export interface MockOptions {
 }
 
 
-const DEFAULT_CPU: AIPlayer = { player: 'p2', delayMs: 600 }
+const DEFAULT_CPU: AIPlayer = { player: 'p2', delayMs: 600, difficulty: 'normal' }
 
 
 export function createMockController(seed = Date.now(), options: MockOptions = {}): GameController {

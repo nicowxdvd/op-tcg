@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildGame } from '../../src/app/gameConfig'
 import { gameResult, reasonLabel, winnerLabel } from '../../src/app/gameResult'
 
-const state = buildGame({ mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 3 })
+const state = buildGame({ mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 3, difficulty: 'normal' })
 
 describe('gameResult', () => {
   it('es null mientras no hay ganador', () => {

@@ -3,7 +3,8 @@ import { getLegalActions, getPower } from '../engine'
 import { findFieldCard } from '../engine/effects/targets'
 import { nextInt } from '../engine/rng'
 import { opponentOf } from '../engine/state'
-import { characterScore, isLethal, lifeAtRisk, pickBlocker, pickCounter, shouldRedraw, wantsAttack, type Rng } from './heuristics'
+import type { Difficulty } from './index'
+import { characterScore, expectedDefense, isLethal, lifeAtRisk, pickBlocker, pickCounter, shouldRedraw, wantsAttack, worthProtecting, type Rng } from './heuristics'
 
 type AttackAction = Extract<Action, { type: 'Attack' }>
 type ChooseAction = Extract<Action, { type: 'Choose' }>
@@ -60,7 +61,7 @@ function chooseOption(state: GameState, player: PlayerId, legal: Action[], rng: 
 }
 
 
-function chooseBattle(state: GameState, player: PlayerId, legal: Action[]): Action {
+function chooseBattle(state: GameState, player: PlayerId, legal: Action[], difficulty: Difficulty): Action {
   const battle = state.battle!
 
   if (battle.step === 'trigger')
@@ -73,18 +74,20 @@ function chooseBattle(state: GameState, player: PlayerId, legal: Action[]): Acti
 
   }
 
-  const counter = lifeAtRisk(state, battle) || isLethal(state, battle) ? pickCounter(state, player, battle) : null
+  const protect = difficulty !== 'normal' && worthProtecting(state, player, battle)
+  const counter = lifeAtRisk(state, battle) || isLethal(state, battle) || protect ? pickCounter(state, player, battle) : null
 
   return legal.find(action => action.type === 'UseCounter' && action.instanceId === counter) ?? passAction(legal)
 
 }
 
 
-function chooseMain(state: GameState, player: PlayerId, legal: Action[], rng: Rng): Action {
+function chooseMain(state: GameState, player: PlayerId, legal: Action[], rng: Rng, difficulty: Difficulty): Action {
   const self    = state.players[player]
   const rival   = state.players[opponentOf(player)]
   const powerOf = (id: string) => getPower(state, id === 'leader' ? self.leader.instanceId : id)
   const costOf  = (defId: string) => state.defs[defId].cost
+  const defense = expectedDefense(state, opponentOf(player), difficulty)
 
   const plays = legal.flatMap(action => {
     if (action.type !== 'PlayCharacter')
@@ -107,7 +110,7 @@ function chooseMain(state: GameState, player: PlayerId, legal: Action[], rng: Rn
   if (boostable.length)
     return pickBest(boostable, action => powerOf(action.target), rng)
 
-  const attacks = allAttacks.filter(action => wantsAttack(state, player, action.attacker, action.target) && (action.target === 'leader' || powerOf(action.attacker) >= powerOf(action.target)))
+  const attacks = allAttacks.filter(action => wantsAttack(state, player, action.attacker, action.target) && (action.target === 'leader' ? !defense || rival.life.length <= 1 || powerOf(action.attacker) >= getPower(state, rival.leader.instanceId) + defense : powerOf(action.attacker) >= powerOf(action.target)))
   const kills   = attacks.filter(action => action.target !== 'leader')
 
   if (kills.length)
@@ -120,7 +123,7 @@ function chooseMain(state: GameState, player: PlayerId, legal: Action[], rng: Rn
 }
 
 
-export function chooseAction(state: GameState, player: PlayerId, rng: Rng): Action {
+export function chooseAction(state: GameState, player: PlayerId, rng: Rng, difficulty: Difficulty = 'normal'): Action {
   const legal = getLegalActions(state, player)
 
   if (!legal.length)
@@ -130,8 +133,8 @@ export function chooseAction(state: GameState, player: PlayerId, rng: Rng): Acti
   if (state.phase === 'mulligan')
     return legal.find(action => action.type === 'Mulligan' && action.redraw === shouldRedraw(state, player)) ?? legal[0]
   if (state.battle)
-    return chooseBattle(state, player, legal)
+    return chooseBattle(state, player, legal, difficulty)
 
-  return chooseMain(state, player, legal, rng)
+  return chooseMain(state, player, legal, rng, difficulty)
 
 }

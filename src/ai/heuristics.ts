@@ -2,12 +2,14 @@ import type { Action, BattleState, CardInstance, GameState, PlayerId } from '../
 import { getPower } from '../engine'
 import { hasKeyword } from '../engine/effects/passive'
 import { opponentOf } from '../engine/state'
+import type { Difficulty } from './index'
 
 export type Rng = number
 
 export const MULLIGAN_MAX_COST = 3
 export const SAFE_LIFE         = 3
 export const COUNTER_LIFE      = 2
+export const PROTECT_COST      = 4
 
 
 export function shouldRedraw(state: GameState, player: PlayerId): boolean {
@@ -104,5 +106,29 @@ export function wantsAttack(state: GameState, player: PlayerId, attacker: string
   const targetPower   = getPower(state, target === 'leader' ? state.players[opponentOf(player)].leader.instanceId : target)
 
   return attackerPower >= targetPower || state.players[player].life.length >= SAFE_LIFE
+
+}
+
+
+export function expectedDefense(state: GameState, defender: PlayerId, difficulty: Difficulty): number {
+  const side = state.players[defender]
+
+  if (difficulty === 'normal')
+    return 0
+  if (difficulty === 'experto')
+    return counterCards(state, defender).reduce((sum, card) => sum + card.counter, 0)
+
+  const known = [...side.deck, ...side.hand]
+  const total = known.reduce((sum, card) => sum + (state.defs[card.defId].type === 'Character' ? state.defs[card.defId].counter : 0), 0)
+
+  return known.length ? Math.round(total / known.length * side.hand.length) : 0
+
+}
+
+
+export function worthProtecting(state: GameState, player: PlayerId, battle: BattleState): boolean {
+  const target = state.players[player].characters.find(character => character.card.instanceId === battle.target)
+
+  return !!target && state.defs[target.card.defId].cost >= PROTECT_COST
 
 }
