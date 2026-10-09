@@ -3,7 +3,7 @@ import { apply } from '../../src/engine/actions'
 import { getLegalActions } from '../../src/engine'
 import { BLOCKER_ID, COUNTER_1K_ID, COUNTER_2K_ID, LEADER_ID, NO_COUNTER_ID } from '../engine/fixtures'
 import { card, inPlay, other, startGame, withPlayer } from '../engine/helpers'
-import { counterCards, isLethal, lifeAtRisk, pickBlocker, pickCounter, powerNeeded, shouldRedraw, wantsAttack } from '../../src/ai/heuristics'
+import { counterCards, expectedDefense, isLethal, lifeAtRisk, pickBlocker, pickCounter, powerNeeded, shouldRedraw, wantsAttack } from '../../src/ai/heuristics'
 import type { GameState, PlayerId } from '../../src/engine/types'
 
 function battle(options: { life: number; hand: string[]; characters?: string[] }): { state: GameState; defender: PlayerId } {
@@ -118,6 +118,29 @@ describe('wantsAttack', () => {
 
     expect(wantsAttack(buffed, 'p1', 'leader', target)).toBe(true)
     expect(wantsAttack({ ...buffed, modifiers: [{ target: target, power: 9000, duration: 'permanent', sourceId: 'x' }] }, 'p1', 'leader', target)).toBe(false)
+
+  })
+
+})
+
+
+describe('expectedDefense', () => {
+
+  it('assumes no defense on normal and the exact hand on experto', () => {
+    const { state, defender } = battle({ life: 5, hand: [COUNTER_1K_ID, COUNTER_2K_ID] })
+
+    expect(expectedDefense(state, defender, 'normal')).toBe(0)
+    expect(expectedDefense(state, defender, 'experto')).toBe(3000)
+
+  })
+
+
+  it('estimates from the deck list on dificil', () => {
+    const { state, defender } = battle({ life: 5, hand: [NO_COUNTER_ID] })
+    const estimate            = expectedDefense(state, defender, 'dificil')
+
+    expect(estimate).toBeGreaterThanOrEqual(0)
+    expect(expectedDefense(withPlayer(state, defender, { hand: [] }), defender, 'dificil')).toBe(0)
 
   })
 

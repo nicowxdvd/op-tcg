@@ -52,7 +52,7 @@ const NOTICE_MS = 3000
 const CLICK_DISTANCE = 6
 const RESULT_MS = 1800
 
-const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0 }
+const MOCK_CONFIG: MatchConfig = { mode: 'cpu', decks: { p1: 'st01', p2: 'st02' }, seed: 0, difficulty: 'normal' }
 
 
 export class Board extends Phaser.Scene {

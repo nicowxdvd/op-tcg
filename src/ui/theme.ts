@@ -43,6 +43,7 @@ export const DURATION = { turn: 200, quick: 150, move: 250, hover: 70 } as const
 export const MIN_SIZE = { w: 1024, h: 600 } as const
 export const MAX_DPR  = 2
 
+export const SERIF_FONT  = '"Fraunces", Georgia, "Times New Roman", serif'
 export const DIALOG_FONT = '"Outfit", "Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
 
 
@@ -62,3 +63,6 @@ export function textStyle(size: number, color: number = COLORS.text, bold = true
   return { fontFamily: FONT.family, fontSize: `${Math.round(size)}px`, fontStyle: bold ? FONT.weight : 'normal', color: css(color) }
 
 }
+
+
+export const LOBBY = { panel: 0x111725, field: 0x131a28, card: 0x121826, border: 0x2a3445, selected: 0x2a2418, gold: 0xe6b955, goldText: 0x1a1406, dim: 0x7d8aa3 } as const

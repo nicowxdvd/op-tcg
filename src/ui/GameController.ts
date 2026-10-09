@@ -119,7 +119,7 @@ export class GameController {
     if (decider === null)
       return
 
-    const action = chooseAction(this.state, decider, this.rng)
+    const action = chooseAction(this.state, decider, this.rng, this.ai!.difficulty)
 
     this.rng = advanceRng(this.rng)
     this.dispatch(action)
