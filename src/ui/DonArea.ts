@@ -15,9 +15,9 @@ export interface DonCounts {
 
 export class DonArea extends Phaser.GameObjects.Container {
 
-  token: CardSprite | null = null
+  sprites: CardSprite[] = []
 
-  constructor(scene: Phaser.Scene, rect: Rect, counts: DonCounts) {
+  constructor(scene: Phaser.Scene, rect: Rect, counts: DonCounts, selected = 0) {
     super(scene, 0, 0)
 
     const font  = Math.max(8, Math.round(rect.h * 0.075))
@@ -31,7 +31,7 @@ export class DonArea extends Phaser.GameObjects.Container {
     dashedRoundRect(frame, rect, RADIUS.zone, 5, 4)
     this.add(frame)
     this.add(scene.add.text(rect.x + 5, rect.y + 3, 'COST AREA', textStyle(font * 0.85, COLORS.zoneLabel)).setAlpha(0.8))
-    this.add(scene.add.text(rect.x + 6, rect.y + rect.h - 4, `ACTIVOS: ${counts.active} · INACTIVOS: ${counts.rested} · ADJUNTOS: ${counts.attached}`, textStyle(font, COLORS.textDim)).setOrigin(0, 1))
+    this.add(scene.add.text(rect.x + 6, rect.y + rect.h - 4, `ACTIVOS: ${counts.active} · INACTIVOS: ${counts.rested} · ADJUNTOS: ${counts.attached}${selected ? ` · SELECCIONADOS: ${selected}` : ''}`, textStyle(font, COLORS.textDim)).setOrigin(0, 1))
 
     if (total === 0)
       this.add(scene.add.text(rect.x + rect.w / 2, rect.y + rect.h * 0.4, 'SIN DON!!', textStyle(font * 1.2, COLORS.zoneLabel)).setOrigin(0.5).setAlpha(0.7))
@@ -41,8 +41,8 @@ export class DonArea extends Phaser.GameObjects.Container {
 
       this.add(sprite)
 
-      if (i === 0 && counts.active > 0)
-        this.token = sprite
+      if (i < counts.active)
+        this.sprites.push(sprite)
 
     })
 

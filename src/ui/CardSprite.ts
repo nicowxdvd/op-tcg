@@ -154,7 +154,7 @@ export class CardSprite extends Phaser.GameObjects.Container {
       this.add(this.scene.add.text(0, h / 2 - 3, String(power), { ...textStyle(font + 1), backgroundColor: cssAlpha(COLORS.shadow, 0.63), padding: { x: 3, y: 1 } }).setOrigin(0.5, 1))
 
     if (view.don)
-      this.add(this.scene.add.text(w / 2 - 3, -h / 2 + 3, `+${view.don}`, { ...textStyle(font, COLORS.cardBorder), backgroundColor: cssAlpha(COLORS.gold, 1), padding: { x: 3, y: 1 } }).setOrigin(1, 0))
+      this.add(this.scene.add.text(0, -h / 2 + 3, `${power} (+${view.don * 1000})`, { ...textStyle(font + 3, COLORS.cardBorder), backgroundColor: cssAlpha(COLORS.gold, 1), padding: { x: 4, y: 2 } }).setOrigin(0.5, 0))
 
   }
 
