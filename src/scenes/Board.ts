@@ -44,7 +44,6 @@ import { Zone } from '../ui/Zone'
 
 type DragSource =
   | { kind: 'hand'; id: string }
-  | { kind: 'don' }
 
 const PLAYABLE  = COLORS.playable
 const ATTACK    = COLORS.attack
@@ -68,6 +67,11 @@ export class Board extends Phaser.Scene {
   private hand: FanView | null = null
   private counterOpen = false
   private attackerId: string | null = null
+  private selectedDon = 0
+  private press: { attackId: string; source: string; canAttack: boolean } | null = null
+  private pressedButton = false
+  private activating: string | null = null
+  private dragArrow: Phaser.GameObjects.Graphics | null = null
   private pendingAttack: Action | null = null
   private notice: string | null = null
   private dirty = true
@@ -159,10 +163,18 @@ export class Board extends Phaser.Scene {
       if (this.handDialog && !this.handDialog.contains(pointer.worldX, pointer.worldY))
         this.closeHandDialog()
 
+      if (this.activating && !this.pressedButton)
+        this.closeActivate()
+
+      this.pressedButton = false
+
     })
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.moveAttackArrow(pointer))
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => this.endPress(pointer))
     this.input.keyboard?.on('keydown-ESC', () => {
       this.closeHandDialog()
       this.cancelAttack()
+      this.closeActivate()
 
     })
 
@@ -208,6 +220,8 @@ export class Board extends Phaser.Scene {
 
     if (!this.inCounterStep())
       this.counterOpen = false
+
+    this.selectedDon = this.legal.some(action => action.type === 'AttachDon') ? Math.min(this.selectedDon, state.players[this.viewer].donActive) : 0
 
     if (this.attackerId && !this.legal.some(action => action.type === 'Attack' && action.attacker === this.attackerId))
       this.cancelAttack()
@@ -323,14 +337,15 @@ export class Board extends Phaser.Scene {
 
 
   private drawSide(player: PlayerId, side: SideLayout, own: boolean) {
-    const state   = this.controller.getState()
-    const data    = state.players[player]
-    const card    = this.layout.card
-    const defOf   = (instance: CardInstance) => state.defs[instance.defId]
-    const started = state.phase !== 'mulligan'
-    const attacks = new Set(own ? this.legal.flatMap(action => action.type === 'Attack' ? [action.attacker] : []) : [])
-    const uses    = new Set(own ? this.legal.flatMap(action => action.type === 'ActivateEffect' ? [action.source] : []) : [])
-    const targets = new Set(!own && this.attackerId ? this.legal.flatMap(action => action.type === 'Attack' && action.attacker === this.attackerId ? [action.target] : []) : [])
+    const state      = this.controller.getState()
+    const data       = state.players[player]
+    const card       = this.layout.card
+    const defOf      = (instance: CardInstance) => state.defs[instance.defId]
+    const started    = state.phase !== 'mulligan'
+    const attacks    = new Set(own ? this.legal.flatMap(action => action.type === 'Attack' ? [action.attacker] : []) : [])
+    const uses       = new Set(own ? this.legal.flatMap(action => action.type === 'ActivateEffect' ? [action.source] : []) : [])
+    const donTargets = new Set(own && this.selectedDon > 0 ? this.legal.flatMap(action => action.type === 'AttachDon' ? [action.target] : []) : [])
+    const targets    = new Set(!own && this.attackerId ? this.legal.flatMap(action => action.type === 'Attack' && action.attacker === this.attackerId ? [action.target] : []) : [])
 
     const place = (rect: SideLayout['leader'], instance: CardInstance, extra: Partial<CardView>, attackId: string) => {
       const middle = center(rect)
@@ -339,32 +354,30 @@ export class Board extends Phaser.Scene {
       this.layer.add(sprite)
       this.wireZoom(sprite)
 
-      if (attacks.has(attackId)) {
-        sprite.setHighlight(this.attackerId === attackId ? COLORS.gold : ATTACK).enableInput()
+      if (donTargets.has(attackId)) {
+        sprite.setHighlight(PLAYABLE).enableInput()
         sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
           if (pointer.leftButtonReleased() && pointer.getDistance() < CLICK_DISTANCE)
-            this.selectAttacker(attackId)
+            this.attachDon(attackId)
+
+        })
+      }
+      else if (attacks.has(attackId) || uses.has(instance.instanceId)) {
+        const canAttack = attacks.has(attackId)
+
+        sprite.setHighlight(this.attackerId === attackId ? COLORS.gold : canAttack ? ATTACK : ACTIVATE).enableInput()
+        sprite.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.leftButtonDown())
+            this.beginPress(attackId, instance.instanceId, canAttack)
 
         })
       }
       else if (targets.has(attackId)) {
         sprite.setHighlight(ATTACK).enableInput()
-        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-          if (pointer.leftButtonReleased() && pointer.getDistance() < CLICK_DISTANCE)
-            this.askAttack(attackId)
-
-        })
-      }
-      else if (uses.has(instance.instanceId)) {
-        sprite.setHighlight(ACTIVATE)
       }
 
-      if (uses.has(instance.instanceId))
-        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
-          if (pointer.leftButtonReleased() && pointer.getDistance() < 6)
-            this.activate(instance.instanceId)
-
-        })
+      if (this.activating === instance.instanceId)
+        this.drawActivateButton(sprite, instance.instanceId)
 
     }
 
@@ -397,15 +410,24 @@ export class Board extends Phaser.Scene {
 
   private drawDon(side: SideLayout, data: PlayerState, own: boolean) {
     const attached = data.leaderAttachedDon + data.characters.reduce((sum, character) => sum + character.attachedDon, 0)
-    const area     = new DonArea(this, side.don, { active: data.donActive, rested: data.donRested, attached })
+    const selected = own ? Math.min(this.selectedDon, data.donActive) : 0
+    const area     = new DonArea(this, side.don, { active: data.donActive, rested: data.donRested, attached }, selected)
 
     this.layer.add([area, new Zone(this, side.donDeck, 'DON!! deck', data.donDeck, data.donDeck ? { def: null, donFace: true } : null, this.layout.card)])
 
-    if (own && area.token && this.legal.some(action => action.type === 'AttachDon')) {
-      area.token.setHighlight(PLAYABLE).enableInput()
-      this.input.setDraggable(area.token)
-      this.sources.set(area.token, { kind: 'don' })
-    }
+    if (own && this.legal.some(action => action.type === 'AttachDon'))
+      area.sprites.forEach((sprite, i) => {
+        sprite.setHighlight(i < selected ? COLORS.gold : PLAYABLE).enableInput()
+
+        if (i < selected)
+          sprite.y -= sprite.cardSize.h * 0.12
+
+        sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+          if (pointer.leftButtonReleased() && pointer.getDistance() < CLICK_DISTANCE)
+            this.toggleDon(i)
+
+        })
+      })
 
   }
 
@@ -571,40 +593,141 @@ export class Board extends Phaser.Scene {
   }
 
 
-  private targetAt(side: SideLayout, player: PlayerState, x: number, y: number): 'leader' | string | null {
-    if (contains(side.leader, x, y))
-      return 'leader'
-
-    const index = player.characters.findIndex((_, i) => contains(side.slots[i], x, y))
-
-    return index >= 0 ? player.characters[index].card.instanceId : null
-
-  }
-
-
   private actionsAt(source: DragSource, x: number, y: number): Action[] {
     const state = this.controller.getState()
     const { self } = this.layout
 
-    if (source.kind === 'hand') {
-      const card = state.players[this.viewer].hand.find(candidate => candidate.instanceId === source.id)
-      const zone = card && state.defs[card.defId].type === 'Stage' ? self.stage : self.characters
+    const card = state.players[this.viewer].hand.find(candidate => candidate.instanceId === source.id)
+    const zone = card && state.defs[card.defId].type === 'Stage' ? self.stage : self.characters
 
-      return contains(zone, x, y) ? this.legal.filter(action => (action.type === 'PlayCharacter' || action.type === 'PlayEvent' || action.type === 'PlayStage') && action.instanceId === source.id) : []
-
-    }
-
-    const target = this.targetAt(self, state.players[this.viewer], x, y)
-
-    return target ? this.legal.filter(action => action.type === 'AttachDon' && action.target === target) : []
+    return contains(zone, x, y) ? this.legal.filter(action => (action.type === 'PlayCharacter' || action.type === 'PlayEvent' || action.type === 'PlayStage') && action.instanceId === source.id) : []
 
   }
 
 
-  private selectAttacker(id: string) {
-    this.attackerId    = this.attackerId === id ? null : id
+  private toggleDon(index: number) {
+    this.selectedDon   = this.selectedDon === index + 1 ? index : index + 1
+    this.attackerId    = null
     this.pendingAttack = null
     this.dirty         = true
+
+  }
+
+
+  private attachDon(target: string) {
+    const action = this.legal.find(candidate => candidate.type === 'AttachDon' && candidate.target === target)
+    const count  = this.selectedDon
+
+    this.selectedDon = 0
+
+    if (!action)
+      return
+
+    for (let i = 0; i < count; i++)
+      this.send(action)
+
+  }
+
+
+  private beginPress(attackId: string, source: string, canAttack: boolean) {
+    this.press      = { attackId, source, canAttack }
+    this.activating = null
+
+    if (!canAttack)
+      return
+
+    this.attackerId    = attackId
+    this.pendingAttack = null
+    this.selectedDon   = 0
+    this.dirty         = true
+
+  }
+
+
+  private moveAttackArrow(pointer: Phaser.Input.Pointer) {
+    if (!this.press?.canAttack || pointer.getDistance() < CLICK_DISTANCE)
+      return
+
+    const { self } = this.layout
+    const color    = this.leaderColor(this.viewer)
+
+    this.dragArrow?.destroy()
+    this.dragArrow = drawAttackArrow(this, this.centerOf(this.viewer, self, this.press.attackId), { x: pointer.worldX, y: pointer.worldY }, color, color).setDepth(1000)
+
+  }
+
+
+  private endPress(pointer: Phaser.Input.Pointer) {
+    const press = this.press
+
+    this.press = null
+    this.dragArrow?.destroy()
+    this.dragArrow = null
+
+    if (!press || !pointer.leftButtonReleased())
+      return
+
+    if (pointer.getDistance() < CLICK_DISTANCE) {
+      this.cancelAttack()
+      this.activating = this.legal.some(action => action.type === 'ActivateEffect' && action.source === press.source) ? press.source : null
+      this.dirty      = true
+
+      return
+    }
+
+    if (!press.canAttack)
+      return
+
+    const target = this.rivalTargetAt(pointer.worldX, pointer.worldY)
+
+    if (target)
+      this.askAttack(target)
+    else
+      this.cancelAttack()
+
+  }
+
+
+  private rivalTargetAt(x: number, y: number): string | null {
+    const { rival } = this.layout
+
+    if (contains(rival.leader, x, y))
+      return 'leader'
+
+    const characters = this.controller.getState().players[opponentOf(this.viewer)].characters
+    const index      = characters.findIndex((_, i) => contains(rival.slots[i], x, y))
+
+    return index >= 0 ? characters[index].card.instanceId : null
+
+  }
+
+
+  private drawActivateButton(sprite: CardSprite, source: string) {
+    const { w, h } = sprite.cardSize
+    const width    = Math.max(w, 90)
+    const height   = Math.max(28, h * 0.22)
+    const x        = sprite.x
+    const y        = sprite.y + h / 2 + 6 + height / 2
+    const face     = this.add.graphics()
+    const hit      = this.add.rectangle(x, y, width, height, COLORS.white, 0).setInteractive({ useHandCursor: true })
+    const label    = this.add.text(x, y, 'Activar', textStyle(height * 0.5, COLORS.dialog)).setOrigin(0.5)
+
+    face.fillStyle(COLORS.gold, 1).fillRoundedRect(x - width / 2, y - height / 2, width, height, RADIUS.button)
+    hit.on('pointerdown', () => {
+      this.pressedButton = true
+    })
+    hit.on('pointerup', () => {
+      this.activating = null
+      this.activate(source)
+    })
+    this.layer.add([face, label, hit])
+
+  }
+
+
+  private closeActivate() {
+    this.activating = null
+    this.dirty      = true
 
   }
 
