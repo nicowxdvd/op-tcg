@@ -38,4 +38,13 @@ describe('gameResult', () => {
 
   })
 
+
+  it('reasonLabel describe la rendición', () => {
+    const result = { winner: 'p2' as const, reason: 'concede' as const, turns: 4 }
+
+    expect(reasonLabel(result, 'cpu')).toBe('Vos se rindió')
+    expect(reasonLabel({ ...result, winner: 'p1' }, 'cpu')).toBe('La CPU se rindió')
+
+  })
+
 })

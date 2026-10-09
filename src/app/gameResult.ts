@@ -4,7 +4,7 @@ import type { MatchConfig } from './gameConfig'
 
 export interface GameResult {
   winner: PlayerId
-  reason: 'life' | 'deck'
+  reason: 'life' | 'deck' | 'concede'
   turns: number
 
 }
@@ -16,7 +16,7 @@ export function gameResult(state: GameState): GameResult | null {
 
   const loser = state.players[opponentOf(state.winner)]
 
-  return { winner: state.winner, reason: loser.deck.length === 0 ? 'deck' : 'life', turns: state.turn }
+  return { winner: state.winner, reason: state.conceded ? 'concede' : loser.deck.length === 0 ? 'deck' : 'life', turns: state.turn }
 
 }
 
@@ -32,6 +32,9 @@ export function winnerLabel(result: GameResult, mode: MatchConfig['mode']): stri
 
 export function reasonLabel(result: GameResult, mode: MatchConfig['mode']): string {
   const loser = mode === 'cpu' ? (result.winner === 'p1' ? 'La CPU' : 'Vos') : (result.winner === 'p1' ? 'El Jugador 2' : 'El Jugador 1')
+
+  if (result.reason === 'concede')
+    return `${loser} se rindió`
 
   return result.reason === 'deck' ? `${loser} se quedó sin cartas en el mazo` : `${loser} se quedó sin Life`
 
