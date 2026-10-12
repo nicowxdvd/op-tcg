@@ -132,6 +132,20 @@ describe('primitiva search', () => {
 
   })
 
+
+  it('con rest trash, las vistas que no se toman van al trash', () => {
+    const state  = deckWith(stage())
+    const result = run(state, { op: 'search', player: 'p1', amount: 3, type: 'Character', pick: 'p1-t92', rest: 'trash' })
+    const mine   = result.state.players.p1
+
+    expect(mine.hand.at(-1)?.instanceId).toBe('p1-t92')
+    expect(mine.deck.map(item => item.instanceId)).toEqual(['p1-t94'])
+    expect(mine.trash.slice(-2).map(item => item.instanceId)).toEqual(['p1-t91', 'p1-t93'])
+    expect(result.events).toEqual([{ type: 'CardSearched', player: 'p1', instanceId: 'p1-t92' }, { type: 'CardDiscarded', player: 'p1', instanceId: 'p1-t91' }, { type: 'CardDiscarded', player: 'p1', instanceId: 'p1-t93' }])
+    expect(total(result.state, 'p1')).toBe(total(state, 'p1'))
+
+  })
+
 })
 
 

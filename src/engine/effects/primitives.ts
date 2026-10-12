@@ -85,7 +85,7 @@ function setRested(state: GameState, target: string, rested: boolean, events: Ga
 }
 
 
-function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, trait: string | undefined, pick: string | null | undefined, events: GameEvent[]): GameState {
+function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, trait: string | undefined, pick: string | null | undefined, rest: 'bottom' | 'trash', events: GameEvent[]): GameState {
   const player = state.players[id]
   const top    = player.deck.slice(0, amount)
   const found  = pick ? top.find(candidate => candidate.instanceId === pick && (!type || state.defs[candidate.defId].type === type) && (!trait || hasTrait(state.defs[candidate.defId], trait))) : undefined
@@ -93,12 +93,16 @@ function search(state: GameState, id: PlayerId, amount: number, type: CardType |
   if (pick && !found)
     throw new Error(`La carta ${pick} no está entre las ${amount} del tope o no cumple el filtro`)
 
-  const rest   = top.filter(candidate => candidate !== found)
+  const others = top.filter(candidate => candidate !== found)
 
   if (found)
     events.push({ type: 'CardSearched', player: id, instanceId: found.instanceId })
 
-  return setPlayer(state, id, { ...player, deck: [...player.deck.slice(amount), ...rest], hand: found ? [...player.hand, found] : player.hand })
+  if (rest === 'trash')
+    for (const other of others)
+      events.push({ type: 'CardDiscarded', player: id, instanceId: other.instanceId })
+
+  return setPlayer(state, id, { ...player, deck: rest === 'trash' ? player.deck.slice(amount) : [...player.deck.slice(amount), ...others], trash: rest === 'trash' ? [...player.trash, ...others] : player.trash, hand: found ? [...player.hand, found] : player.hand })
 
 }
 
@@ -237,7 +241,7 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
     case 'activate':
       return setRested(state, step.target, false, events)
     case 'search':
-      return search(state, step.player, step.amount, step.type, step.trait, step.pick, events)
+      return search(state, step.player, step.amount, step.type, step.trait, step.pick, step.rest ?? 'bottom', events)
     case 'toLife':
       return toLife(state, step.player, step.instanceId, events)
     case 'discard':
