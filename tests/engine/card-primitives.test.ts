@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
 import { resolveQueue } from '../../src/engine/effects'
-import { hasKeyword, passivePower } from '../../src/engine/effects/passive'
+import { fieldCost, hasKeyword, passivePower } from '../../src/engine/effects/passive'
 import { hasTrait } from '../../src/engine/effects/targets'
 import { getLegalActions, getPower } from '../../src/engine/queries'
 import { BLOCKER_ID, defs } from './fixtures'
@@ -435,6 +435,29 @@ describe('efectos pasivos', () => {
     expect(passivePower(state, 'p1-t7')).toBe(1000)
     expect(passivePower(state, state.players.p1.leader.instanceId)).toBe(1000)
     expect(passivePower(state, 'p2-t2')).toBe(0)
+
+  })
+
+
+  it('fieldCost suma los auras de costo al costo base y no cambia el de la mano', () => {
+    const effects = { 'T-C04': [passive({ aura: { cost: 12 } })], 'T-C03': [passive({ condition: ctx => ctx.state.players[ctx.owner].characters.length >= 2, aura: { cost: 6 } })] }
+    const state   = withPlayer(stage(effects), 'p1', { characters: [inPlay(card('p1', 'T-C04', 1)), inPlay(card('p1', 'T-C03', 7))] })
+
+    expect(fieldCost(state, 'p1-t1')).toBe(defs['T-C04'].cost + 12)
+    expect(fieldCost(state, 'p1-t7')).toBe(defs['T-C03'].cost + 6)
+    expect(fieldCost(state, 'p2-t2')).toBe(defs['T-C02'].cost)
+    expect(state.defs['T-C04'].cost).toBe(defs['T-C04'].cost)
+
+  })
+
+
+  it('fieldCost de un aura afecta a otras cartas y lanza error con una carta fuera de juego', () => {
+    const effects = { 'T-C04': [passive({ aura: { cost: 1, affects: (ctx, candidate) => candidate !== ctx.source && candidate.startsWith(ctx.owner) } })] }
+    const state   = withPlayer(stage(effects), 'p1', { characters: [inPlay(card('p1', 'T-C04', 1)), inPlay(card('p1', 'T-C03', 7))] })
+
+    expect(fieldCost(state, 'p1-t7')).toBe(defs['T-C03'].cost + 1)
+    expect(fieldCost(state, 'p1-t1')).toBe(defs['T-C04'].cost)
+    expect(() => fieldCost(state, 'nadie')).toThrow(/no está en juego/)
 
   })
 

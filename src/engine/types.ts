@@ -79,6 +79,7 @@ export interface EffectCost {
 
 export interface Aura {
   power?: number
+  cost?: number
   keyword?: Keyword
   affects?: (ctx: EffectContext, candidate: string) => boolean
 

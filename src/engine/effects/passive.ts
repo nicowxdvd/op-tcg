@@ -20,6 +20,17 @@ export function passivePower(state: GameState, instanceId: string): number {
 }
 
 
+export function fieldCost(state: GameState, instanceId: string): number {
+  const found = fieldCards(state, 'p1').concat(fieldCards(state, 'p2')).find(candidate => candidate.instanceId === instanceId)
+
+  if (!found)
+    throw new Error(`La carta ${instanceId} no está en juego`)
+
+  return state.defs[found.defId].cost + auraSources(state, instanceId).reduce((sum, aura) => sum + (aura.cost ?? 0), 0)
+
+}
+
+
 export function hasKeyword(state: GameState, instanceId: string, keyword: Keyword): boolean {
   const found = fieldCards(state, 'p1').concat(fieldCards(state, 'p2')).find(candidate => candidate.instanceId === instanceId)
 
