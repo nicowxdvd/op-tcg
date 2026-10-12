@@ -23,8 +23,8 @@ function decider(state: GameState): PlayerId {
 }
 
 
-function play(seed: number): { state: GameState; steps: number; types: Set<Action['type']> } {
-  let state = createGame({ seed, defs, effects: effectRegistry, decks: { p1: loadDeck('st01'), p2: loadDeck('st02') } })
+function play(seed: number, p1 = 'st01', p2 = 'st02'): { state: GameState; steps: number; types: Set<Action['type']> } {
+  let state = createGame({ seed, defs, effects: effectRegistry, decks: { p1: loadDeck(p1), p2: loadDeck(p2) } })
   let rng   = seed
   let steps = 0
   const types = new Set<Action['type']>()
@@ -67,6 +67,22 @@ describe('AI vs AI ST01 vs ST02', () => {
 
     for (const type of ['PlayCharacter', 'AttachDon', 'Attack', 'DeclareBlock', 'UseCounter'] as const)
       expect(seen.has(type), type).toBe(true)
+
+  })
+
+})
+
+
+describe('AI vs AI con los mazos OP17', () => {
+
+  const pairs = [['xebec', 'luffy'], ['luffy', 'xebec'], ['st01', 'xebec'], ['luffy', 'st02']] as const
+
+  it.each(pairs.flatMap(([p1, p2]) => [1, 2, 3, 4, 5].map(seed => [p1, p2, seed] as const)))('%s vs %s seed %i finishes with a winner', (p1, p2, seed) => {
+    const { state, steps } = play(seed, p1, p2)
+
+    expect(state.phase).toBe('gameOver')
+    expect(state.winner).not.toBeNull()
+    expect(steps).toBeLessThan(MAX_STEPS)
 
   })
 

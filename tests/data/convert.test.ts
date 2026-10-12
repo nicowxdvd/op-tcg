@@ -25,6 +25,13 @@ describe('cardFromApi', () => {
   })
 
 
+  it('quita el número que la API agrega a los nombres repetidos', () => {
+    expect(cardFromApi(api({ card_name: 'Rocks.D.Xebec (039)' })).name).toBe('Rocks.D.Xebec')
+    expect(cardFromApi(api({ card_name: 'Kaido' })).name).toBe('Kaido')
+
+  })
+
+
   it('conserva los tipos (sub_types) como texto, o vacío si faltan', () => {
     expect(cardFromApi(api({ sub_types: 'Straw Hat Crew Supernovas' })).traits).toBe('Straw Hat Crew Supernovas')
     expect(cardFromApi(api({ sub_types: null })).traits).toBe('')
@@ -89,6 +96,12 @@ describe('keywordsFromText', () => {
 
   it('deduce Banish', () => {
     expect(keywordsFromText('[Banish] (When this card deals damage, the target card is trashed without activating its Trigger.)')).toEqual(['Banish'])
+
+  })
+
+
+  it('deduce Rush: Character como keyword propio', () => {
+    expect(keywordsFromText('[Rush: Character]\n[When Attacking] Give up to 1 of your opponent\'s Characters -3000 power during this turn.')).toEqual(['RushCharacter'])
 
   })
 

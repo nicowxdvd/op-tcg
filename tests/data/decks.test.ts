@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { effectRegistry, listDecks, loadCards, loadDeck, loadDefs } from '../../src/data'
 import { createGame, validateDeck } from '../../src/engine/state'
 
-const DECK_IDS = ['st01', 'st02']
+const DECK_IDS = ['st01', 'st02', 'xebec', 'luffy']
 
-describe('mazos Starter Deck', () => {
+describe('mazos del lobby', () => {
   const defs = loadDefs()
 
   it.each(DECK_IDS)('%s cumple las reglas de mazo', id => {
@@ -43,13 +43,28 @@ describe('mazos Starter Deck', () => {
 
   })
 
+
+  it('createGame acepta xebec contra luffy con el registro de efectos', () => {
+    expect(() => createGame({ seed: 1, defs, decks: { p1: loadDeck('xebec'), p2: loadDeck('luffy') }, effects: effectRegistry })).not.toThrow()
+
+  })
+
 })
 
 
 describe('cargador', () => {
-  it('convierte las 34 cartas de ST-01 y ST-02', () => {
-    expect(loadCards()).toHaveLength(34)
-    expect(Object.keys(loadDefs())).toHaveLength(34)
+  it('convierte las 63 cartas de ST-01, ST-02 y los mazos OP17', () => {
+    expect(loadCards()).toHaveLength(63)
+    expect(Object.keys(loadDefs())).toHaveLength(63)
+
+  })
+
+
+  it('los nombres de las cartas OP17 no llevan el número de la API', () => {
+    const defs = loadDefs()
+
+    expect(Object.values(defs).filter(def => /\(\d{3}\)/.test(def.name))).toEqual([])
+    expect(defs['OP17-039'].name).toBe('Rocks.D.Xebec')
 
   })
 

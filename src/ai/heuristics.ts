@@ -1,6 +1,6 @@
 import type { Action, BattleState, CardInstance, GameState, PlayerId } from '../engine/types'
 import { getPower } from '../engine'
-import { hasKeyword } from '../engine/effects/passive'
+import { handCounter, hasKeyword } from '../engine/effects/passive'
 import { opponentOf } from '../engine/state'
 import type { Difficulty } from './index'
 
@@ -75,7 +75,7 @@ export function powerNeeded(state: GameState, battle: BattleState): number {
 
 
 export function counterCards(state: GameState, player: PlayerId): { instanceId: string; counter: number }[] {
-  return state.players[player].hand.flatMap(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].counter > 0 ? [{ instanceId: card.instanceId, counter: state.defs[card.defId].counter }] : [])
+  return state.players[player].hand.flatMap(card => state.defs[card.defId].type === 'Character' && handCounter(state, player, card.instanceId) > 0 ? [{ instanceId: card.instanceId, counter: handCounter(state, player, card.instanceId) }] : [])
 
 }
 

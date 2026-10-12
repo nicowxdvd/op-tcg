@@ -3,7 +3,7 @@ import { opponentOf, requireMain } from './state'
 import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
 import { fireEffects, resolveQueue } from './effects'
-import { hasKeyword } from './effects/passive'
+import { forcedTargets, handCounter, hasKeyword } from './effects/passive'
 import { findFieldCard } from './effects/targets'
 import { queueEffects } from './effects/timing'
 
@@ -44,12 +44,17 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush'))
+  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush') && !(action.target !== 'leader' && hasKeyword(state, character.card.instanceId, 'RushCharacter')))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)
   if (target && !target.rested)
     throw new Error(`Solo se ataca a un Character rival descansado (${action.target} está activo)`)
+
+  const forced = forcedTargets(state, opponentOf(action.player))
+
+  if (forced.length && !forced.includes(action.target))
+    throw new Error(`El rival solo puede ser atacado en ${forced.join(', ')}`)
 
   const rested = fromLeader ? { ...player, leaderRested: true } : { ...player, characters: player.characters.map(candidate => candidate === character ? { ...candidate, rested: true } : candidate) }
   const battle = { attacker: action.attacker, target: action.target, attackerPlayer: action.player, step: 'block' as const, counterPower: 0 }
@@ -108,11 +113,14 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
     throw new Error(`La carta ${action.instanceId} no está en la mano de ${action.player}`)
   if (def.type !== 'Character')
     throw new Error(`${def.name} no es un Character`)
-  if (def.counter <= 0)
+
+  const value = handCounter(state, action.player, action.instanceId)
+
+  if (value <= 0)
     throw new Error(`${def.name} no tiene counter`)
 
   const updated      = { ...player, hand: player.hand.filter(candidate => candidate !== picked), trash: [...player.trash, picked] }
-  const counterPower = battle.counterPower + def.counter
+  const counterPower = battle.counterPower + value
 
   return { state: { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }, events: [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }] }
 

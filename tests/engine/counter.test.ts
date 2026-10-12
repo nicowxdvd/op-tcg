@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
 import { COUNTER_1K_ID, COUNTER_2K_ID, LEADER_ID, NO_COUNTER_ID } from './fixtures'
+import { getLegalActions } from '../../src/engine/queries'
 import { card, other, startGame, withPlayer } from './helpers'
 import type { GameState, PlayerId } from '../../src/engine/types'
 
@@ -122,6 +123,38 @@ describe('PassCounter', () => {
     const { state, defender } = stage()
 
     expect(() => apply({ ...state, battle: null }, { type: 'PassCounter', player: defender })).toThrow(/paso counter/)
+
+  })
+
+})
+
+
+describe('Counter dinámico en la mano', () => {
+
+  function dynamic(allowed: boolean): { state: GameState; defender: PlayerId } {
+    const { state, defender } = stage()
+    const effects             = { [NO_COUNTER_ID]: [{ timing: 'passive' as const, handCounter: 2000, condition: () => allowed, run: () => [] }] }
+
+    return { state: { ...state, effects }, defender }
+
+  }
+
+  it('suma el bonus al counter de la carta cuando se cumple la condición', () => {
+    const { state, defender } = dynamic(true)
+    const action              = { type: 'UseCounter' as const, player: defender, instanceId: `${defender}-t3` }
+
+    expect(getLegalActions(state, defender)).toContainEqual(action)
+    expect(apply(state, action).state.battle?.counterPower).toBe(2000)
+
+  })
+
+
+  it('sin la condición la carta sigue sin counter', () => {
+    const { state, defender } = dynamic(false)
+    const action              = { type: 'UseCounter' as const, player: defender, instanceId: `${defender}-t3` }
+
+    expect(getLegalActions(state, defender)).not.toContainEqual(action)
+    expect(() => apply(state, action)).toThrow(/no tiene counter/)
 
   })
 

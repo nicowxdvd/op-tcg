@@ -2,8 +2,8 @@ import type { CardDef, CardType, Keyword } from '../engine/types'
 import type { ApiCard } from './apiTypes'
 
 const CARD_TYPES: CardType[] = ['Leader', 'Character', 'Event', 'Stage']
-const KEYWORD_TAGS: Record<string, Keyword> = { 'Rush': 'Rush', 'Blocker': 'Blocker', 'Double Attack': 'DoubleAttack', 'Banish': 'Banish' }
-const LEADING_KEYWORD = /^\s*\[(Rush|Blocker|Double Attack|Banish)\](?:\s*\([^)]*\))?/
+const KEYWORD_TAGS: Record<string, Keyword> = { 'Rush': 'Rush', 'Rush: Character': 'RushCharacter', 'Blocker': 'Blocker', 'Double Attack': 'DoubleAttack', 'Banish': 'Banish' }
+const LEADING_KEYWORD = /^\s*\[(Rush: Character|Rush|Blocker|Double Attack|Banish)\](?:\s*\([^)]*\))?/
 
 
 function toNumber(id: string, field: string, value: string | number | null): number {
@@ -51,7 +51,7 @@ export function cardFromApi(card: ApiCard): CardDef {
 
   return {
     id,
-    name: card.card_name,
+    name: card.card_name.replace(/\s*\(\d{3}\)$/, ''),
     type: toType(id, card.card_type),
     cost: toNumber(id, 'card_cost', card.card_cost),
     power: toNumber(id, 'card_power', card.card_power),

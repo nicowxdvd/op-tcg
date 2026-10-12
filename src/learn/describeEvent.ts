@@ -68,6 +68,7 @@ const DESCRIBERS: Describers = {
   CardSearched: (event, state) => `${who(event.player)} busca en su mazo y toma ${nameOf(state, event.instanceId)}`,
   CardToLife: event => `${who(event.player)} pone una carta en su Life`,
   CardToHand: event => `Una carta pasa a la mano de ${who(event.player)}`,
+  CardToDeckBottom: (event, state) => `${nameOf(state, event.instanceId)} de ${who(event.player)} va al fondo de su mazo`,
   ChoiceRequested: event => `${who(event.player)} debe elegir una opción`,
   ChoiceMade: (event, state) => `${who(event.player)} elige ${nameOf(state, event.option)}`,
   ChoicePassed: event => `${who(event.player)} no elige nada`,
