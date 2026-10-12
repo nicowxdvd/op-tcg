@@ -264,6 +264,91 @@ describe('primitiva playSelf', () => {
 })
 
 
+describe('primitiva playFrom', () => {
+
+  function withHand(hand: ReturnType<typeof card>[], extra: Partial<GameState['players']['p1']> = {}): GameState {
+    return withPlayer(stage(), 'p1', { hand, characters: [], ...extra })
+
+  }
+
+  it('juega una carta de la mano elegida con el filtro de costo', () => {
+    const state   = withHand([card('p1', 'T-C03', 60), card('p1', 'T-C06', 61)])
+    const pending = run(state, { op: 'playFrom', player: 'p1', from: 'hand', amount: 1, filter: { maxCost: 2 } }).state
+
+    expect(pending.pending?.options).toEqual(['p1-t60'])
+
+    const mine = apply(pending, { type: 'Choose', player: 'p1', option: 'p1-t60' }).state.players.p1
+
+    expect(mine.characters.map(item => item.card.instanceId)).toEqual(['p1-t60'])
+    expect(mine.hand.map(item => item.instanceId)).toEqual(['p1-t61'])
+
+  })
+
+
+  it('juega desde el trash con filtro de tipo', () => {
+    const state   = withHand([], { trash: [card('p1', TRAIT_ID, 60), card('p1', 'T-C03', 61)] })
+    const pending = run(state, { op: 'playFrom', player: 'p1', from: 'trash', amount: 1, filter: { trait: 'Straw Hat Crew' } }).state
+
+    expect(pending.pending?.options).toEqual(['p1-t60'])
+
+    const mine = apply(pending, { type: 'Choose', player: 'p1', option: 'p1-t60' }).state.players.p1
+
+    expect(mine.characters.map(item => item.card.instanceId)).toEqual(['p1-t60'])
+    expect(mine.trash.map(item => item.instanceId)).toEqual(['p1-t61'])
+
+  })
+
+
+  it('con amount 2 y costo total máximo, la segunda elección respeta lo que queda', () => {
+    const state   = withHand([card('p1', 'T-C05', 60), card('p1', 'T-C03', 61), card('p1', 'T-C04', 62)])
+    const first   = run(state, { op: 'playFrom', player: 'p1', from: 'hand', amount: 2, filter: { maxTotalCost: 6 } }).state
+
+    expect(first.pending?.options).toEqual(['p1-t60', 'p1-t61', 'p1-t62'])
+
+    const second = apply(first, { type: 'Choose', player: 'p1', option: 'p1-t60' }).state
+
+    expect(second.pending?.options).toEqual(['p1-t61'])
+
+    const done = apply(second, { type: 'Choose', player: 'p1', option: 'p1-t61' }).state
+
+    expect(done.pending).toBeNull()
+    expect(done.players.p1.characters.map(item => item.card.instanceId)).toEqual(['p1-t60', 'p1-t61'])
+
+  })
+
+
+  it('con distinctNames no ofrece otra carta con el mismo nombre', () => {
+    const state  = withHand([card('p1', 'T-C03', 60), card('p1', 'T-C03', 61), card('p1', 'T-C04', 62)])
+    const first  = run(state, { op: 'playFrom', player: 'p1', from: 'hand', amount: 2, filter: { distinctNames: true } }).state
+    const second = apply(first, { type: 'Choose', player: 'p1', option: 'p1-t60' }).state
+
+    expect(second.pending?.options).toEqual(['p1-t62'])
+
+  })
+
+
+  it('permite no jugar nada y corta la secuencia', () => {
+    const state  = withHand([card('p1', 'T-C03', 60)])
+    const first  = run(state, { op: 'playFrom', player: 'p1', from: 'hand', amount: 2 }).state
+    const result = apply(first, { type: 'PassChoice', player: 'p1' }).state
+
+    expect(result.pending).toBeNull()
+    expect(result.players.p1.characters).toEqual([])
+    expect(result.players.p1.hand).toHaveLength(1)
+
+  })
+
+
+  it('sin cartas que cumplan no pide decisión', () => {
+    const state = withHand([card('p1', 'T-C06', 60)])
+
+    expect(run(state, { op: 'playFrom', player: 'p1', from: 'hand', amount: 1, filter: { maxCost: 2 } }).state.pending).toBeNull()
+
+  })
+
+})
+
+
 describe('efectos pasivos', () => {
 
   it('un aura de power solo cuenta con los DON!! requeridos', () => {

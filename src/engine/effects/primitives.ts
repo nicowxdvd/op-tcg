@@ -219,7 +219,7 @@ function activateDon(state: GameState, id: PlayerId, amount: number, events: Gam
 
 function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: string | undefined, events: GameEvent[]): GameState {
   const player = state.players[id]
-  const card   = player.trash.find(candidate => candidate.instanceId === instanceId)
+  const card   = player.trash.find(candidate => candidate.instanceId === instanceId) ?? player.hand.find(candidate => candidate.instanceId === instanceId)
 
   if (!card || state.defs[card.defId].type !== 'Character')
     return state
@@ -235,7 +235,7 @@ function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: s
   events.push({ type: 'CharacterPlayed', player: id, instanceId })
 
   const trash = [...player.trash.filter(candidate => candidate !== card), ...(replaced ? [replaced.card] : [])]
-  const next  = setPlayer(state, id, { ...player, trash, characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
+  const next  = setPlayer(state, id, { ...player, trash, hand: player.hand.filter(candidate => candidate !== card), characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
 
   return queueEffects(next, 'onPlay', { instanceId, defId: card.defId, owner: id, attachedDon: 0 }, events)
 

@@ -8,6 +8,7 @@ import { queueEffects, type EffectSource } from './timing'
 type SearchStep = Extract<EffectStep, { op: 'search' }>
 type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
 type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
+type PlayFrom   = Extract<EffectStep, { op: 'playFrom' }>
 
 export type { EffectSource } from './timing'
 
@@ -47,6 +48,32 @@ function expandPlay(state: GameState, step: PlayStep): EffectStep[] {
 }
 
 
+function expandPlayFrom(state: GameState, step: PlayFrom): EffectStep[] {
+  const player = state.players[step.player]
+  const filter = step.filter ?? {}
+  const played = (step.played ?? []).map(instanceId => player.characters.find(candidate => candidate.card.instanceId === instanceId)?.card.defId).filter((defId): defId is string => !!defId)
+  const spent  = played.reduce((sum, defId) => sum + state.defs[defId].cost, 0)
+  const names  = played.map(defId => state.defs[defId].name)
+  const limit  = Math.min(filter.maxCost ?? Infinity, (filter.maxTotalCost ?? Infinity) - spent)
+
+  if (step.amount <= 0)
+    return []
+
+  const options = (step.from === 'hand' ? player.hand : player.trash).filter(candidate => {
+    const def = state.defs[candidate.defId]
+
+    return def.type === 'Character' && def.cost <= limit && (!filter.trait || hasTrait(def, filter.trait)) && !(filter.distinctNames && names.includes(def.name))
+
+  }).map(candidate => candidate.instanceId)
+
+  if (!options.length)
+    return []
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: true, then: [{ op: 'playSelf', player: step.player, instanceId: CHOICE }, { ...step, amount: step.amount - 1, played: [...(step.played ?? []), CHOICE] }] }]
+
+}
+
+
 export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
   let next = state
 
@@ -68,6 +95,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'playSelf' && step.replace === undefined) {
         steps = [...expandPlay(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'playFrom') {
+        steps = [...expandPlayFrom(next, step), ...others]
 
         continue
 
