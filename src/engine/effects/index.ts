@@ -1,6 +1,7 @@
 import type { EffectContext, EffectStep, GameEvent, GameState, QueuedEffect, Timing } from '../types'
 import { CHOICE } from './binding'
-import { MAX_CHARACTERS } from '../state'
+import { MAX_CHARACTERS, opponentOf } from '../state'
+import { fieldCost } from './passive'
 import { executeStep } from './primitives'
 import { fieldCards, findFieldCard, hasTrait } from './targets'
 import { isEligible, queueEffects, type EffectSource } from './timing'
@@ -10,6 +11,7 @@ type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
 type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
 type PlayFrom   = Extract<EffectStep, { op: 'playFrom' }>
 type FromTrash  = Extract<EffectStep, { op: 'fromTrash' }>
+type KoTotal    = Extract<EffectStep, { op: 'koTotal' }>
 type ToBottom   = Extract<EffectStep, { op: 'trashToBottom' }>
 type Removal    = Extract<EffectStep, { op: 'ko' | 'toHand' | 'toBottom' }>
 
@@ -106,6 +108,17 @@ function expandTrashBottom(state: GameState, step: ToBottom): EffectStep[] {
 }
 
 
+function expandKoTotal(state: GameState, step: KoTotal): EffectStep[] {
+  const options = state.players[opponentOf(step.player)].characters.filter(candidate => fieldCost(state, candidate.card.instanceId) <= step.max).map(candidate => candidate.card.instanceId)
+
+  if (!options.length)
+    return []
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: true, then: [{ ...step, pick: CHOICE }] }]
+
+}
+
+
 function removedId(step: Removal): string {
   return step.op === 'toHand' ? step.instanceId : step.target
 
@@ -184,6 +197,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
           continue
 
         }
+
+      }
+
+      if (step.op === 'koTotal') {
+        steps = step.pick === undefined ? [...expandKoTotal(next, step), ...others] : [{ op: 'ko', target: step.pick }, { op: 'koTotal', player: step.player, max: step.max - fieldCost(next, step.pick) }, ...others]
+
+        continue
 
       }
 

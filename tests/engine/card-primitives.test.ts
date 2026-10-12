@@ -490,6 +490,54 @@ describe('primitiva trashToBottom', () => {
 })
 
 
+describe('primitiva koTotal', () => {
+
+  function rivals(extra: EffectRegistry = {}): GameState {
+    return withPlayer(stage(extra), 'p2', { characters: [inPlay(card('p2', 'T-C03', 20)), inPlay(card('p2', 'T-C02', 21)), inPlay(card('p2', 'T-C06', 22))] })
+
+  }
+
+  it('K.O. de a un Character mientras el costo total entre en el máximo', () => {
+    const first = run(rivals(), { op: 'koTotal', player: 'p1', max: 4 }).state
+
+    expect(first.pending?.options).toEqual(['p2-t20', 'p2-t21'])
+
+    const second = apply(first, { type: 'Choose', player: 'p1', option: 'p2-t20' }).state
+
+    expect(second.pending?.options).toEqual(['p2-t21'])
+
+    const done = apply(second, { type: 'Choose', player: 'p1', option: 'p2-t21' }).state
+
+    expect(done.pending).toBeNull()
+    expect(done.players.p2.characters.map(item => item.card.instanceId)).toEqual(['p2-t22'])
+    expect(done.players.p2.trash.map(item => item.instanceId)).toEqual(['p2-t20', 'p2-t21'])
+
+  })
+
+
+  it('permite parar antes y usa el costo en el campo', () => {
+    const effects = { 'T-C03': [{ timing: 'passive' as const, aura: { cost: 12 }, run: () => [] }] }
+    const first   = run(rivals(effects), { op: 'koTotal', player: 'p1', max: 4 }).state
+
+    expect(first.pending?.options).toEqual(['p2-t21'])
+
+    const done = apply(first, { type: 'PassChoice', player: 'p1' }).state
+
+    expect(done.pending).toBeNull()
+    expect(done.players.p2.characters).toHaveLength(3)
+
+  })
+
+
+  it('sin Characters que entren en el máximo no pide decisión', () => {
+    expect(run(rivals(), { op: 'koTotal', player: 'p1', max: 0 }).state.pending).toBeNull()
+    expect(run(withPlayer(stage(), 'p2', { characters: [] }), { op: 'koTotal', player: 'p1', max: 4 }).state.pending).toBeNull()
+
+  })
+
+})
+
+
 describe('efectos pasivos', () => {
 
   it('un aura de power solo cuenta con los DON!! requeridos', () => {

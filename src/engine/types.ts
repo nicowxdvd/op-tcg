@@ -35,6 +35,7 @@ export type EffectStep =
   | { op: 'toHand'; player: PlayerId; instanceId: string; force?: boolean }
   | { op: 'discard'; player: PlayerId; instanceId: string }
   | { op: 'toBottom'; target: string; force?: boolean }
+  | { op: 'koTotal'; player: PlayerId; max: number; pick?: string }
   | { op: 'trashToBottom'; player: PlayerId; amount: number; pick?: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
   | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
