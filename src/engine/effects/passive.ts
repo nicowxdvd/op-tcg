@@ -1,9 +1,17 @@
 import type { EffectContext, GameState, Keyword, PlayerId } from '../types'
-import { fieldCards } from './targets'
+import { fieldCards, type FieldCard } from './targets'
 import { isEligible } from './timing'
 
+function stageCard(state: GameState, owner: PlayerId): FieldCard[] {
+  const stage = state.players[owner].stage
+
+  return stage ? [{ instanceId: stage.instanceId, defId: stage.defId, owner, rested: false, attachedDon: 0, isLeader: false }] : []
+
+}
+
+
 function auraSources(state: GameState, instanceId: string) {
-  return (['p1', 'p2'] as const).flatMap(owner => fieldCards(state, owner)).flatMap(source => (state.effects[source.defId] ?? []).flatMap((effect, index) => {
+  return (['p1', 'p2'] as const).flatMap(owner => [...fieldCards(state, owner), ...stageCard(state, owner)]).flatMap(source => (state.effects[source.defId] ?? []).flatMap((effect, index) => {
     const ctx: EffectContext = { state, source: source.instanceId, owner: source.owner }
     const applies            = effect.timing === 'passive' && effect.aura && isEligible(state, source, index, effect) && (effect.aura.affects ? effect.aura.affects(ctx, instanceId) : source.instanceId === instanceId)
 
