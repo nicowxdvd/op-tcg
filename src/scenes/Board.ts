@@ -2,7 +2,7 @@ import * as Phaser from 'phaser'
 import { getPower, opponentOf } from '../engine'
 import type { Action, CardInstance, GameEvent, PlayerId, PlayerState } from '../engine'
 import { createController } from '../app/createController'
-import { rematchConfig } from '../app/gameConfig'
+import { HUMAN_PLAYER, rematchConfig } from '../app/gameConfig'
 import type { MatchConfig } from '../app/gameConfig'
 import { gameResult } from '../app/gameResult'
 import { soundsFor } from '../app/sounds'
@@ -28,9 +28,11 @@ import type { HandSort } from '../ui/handSort'
 import { instructionFor, phaseLabel } from '../ui/instructions'
 import { PlayerBadge } from '../ui/PlayerBadge'
 import { PlayerPanel } from '../ui/PlayerPanel'
-import { MOCK_COUNTER_CLOCK, MOCK_RIVAL, MOCK_SELF } from '../ui/mockPlayers'
+import { LOW_MS, MatchClock, formatClock } from '../app/clock'
 import { GameLog } from '../ui/GameLog'
-import { describeEvent } from '../learn/describeEvent'
+import { describeEntry } from '../learn/logEntry'
+import type { LogContext } from '../learn/logEntry'
+import { playerNames, playersFor } from '../app/players'
 import { describePhase } from '../learn/describePhase'
 import { PromptDialog } from '../ui/PromptDialog'
 import { StartRollDialog } from '../ui/StartRollDialog'
@@ -40,7 +42,7 @@ import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
 import { fadeIn, goTo } from '../ui/transitions'
-import { COLORS, CARD_FACES, RADIUS, textStyle } from '../ui/theme'
+import { COLORS, LEADER_TINTS, RADIUS, textStyle } from '../ui/theme'
 import { drawAttackArrow } from '../ui/AttackArrow'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
@@ -88,6 +90,9 @@ export class Board extends Phaser.Scene {
   private queued: GameEvent[] = []
   private lastActive: PlayerId | null = null
   private log = new GameLog()
+  private clock = new MatchClock()
+  private lastTick = 0
+  private badges: Partial<Record<PlayerId, PlayerBadge>> = {}
   private learnOpen = true
   private handSort: HandSort = 'original'
   private config: MatchConfig = MOCK_CONFIG
@@ -108,11 +113,13 @@ export class Board extends Phaser.Scene {
     this.images     = data.images ?? []
     this.donImage   = data.donImage ?? null
     this.log        = new GameLog()
+    this.clock      = new MatchClock()
+    this.lastTick   = Date.now()
     this.learnOpen  = loadPreferences().learnPanel
 
     const state = this.controller.getState()
 
-    this.log.add(describeEvent({ type: 'GameStarted', first: state.first }, state))
+    this.log.add(describeEntry({ type: 'GameStarted', first: state.first }, state, this.logContext()))
 
   }
 
@@ -139,7 +146,7 @@ export class Board extends Phaser.Scene {
         audio.play(name)
 
       for (const event of events)
-        this.log.add(describeEvent(event, this.controller.getState()))
+        this.log.add(describeEntry(event, this.controller.getState(), this.logContext()))
 
       this.dirty = true
 
@@ -150,6 +157,7 @@ export class Board extends Phaser.Scene {
       this.controller.dispose()
 
     })
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.tickClock() })
     this.scale.on('resize', () => this.fitCamera())
     this.events.once('shutdown', () => this.scale.off('resize'))
     this.input.on('drag', (_pointer: Phaser.Input.Pointer, object: Phaser.GameObjects.Container, x: number, y: number) => object.setPosition(x, y))
@@ -284,13 +292,21 @@ export class Board extends Phaser.Scene {
   private drawFrames(active: PlayerId, rival: PlayerId) {
     const state   = this.controller.getState()
     const changed = this.lastActive !== null && this.lastActive !== active
-    const counter = state.battle?.step === 'counter' ? opponentOf(state.battle.attackerPlayer) : null
-    const sides   = [{ id: rival, side: this.layout.rival, mock: MOCK_RIVAL }, { id: this.viewer, side: this.layout.self, mock: MOCK_SELF }]
+    const players = playersFor(this.config, { p1: this.leaderColor('p1'), p2: this.leaderColor('p2') })
+    const running = state.winner ? null : this.controller.actor()
+    const sides   = [{ id: rival, side: this.layout.rival }, { id: this.viewer, side: this.layout.self }]
 
     this.lastActive = active
 
-    for (const { id, side, mock } of sides)
-      this.layer.add([new PlayerPanel(this, side.panel, this.leaderColor(id), id === active, changed), new PlayerBadge(this, side.badge, side.clock, mock, id === active, id === counter ? MOCK_COUNTER_CLOCK : mock.clock)])
+    this.badges = {}
+
+    for (const { id, side } of sides) {
+      const left  = this.clock.remaining(id)
+      const badge = new PlayerBadge(this, side.badge, side.clock, players[id], id === active, formatClock(left), id === running, left < LOW_MS)
+
+      this.badges[id] = badge
+      this.layer.add([new PlayerPanel(this, side.panel, this.leaderColor(id), id === active, changed), badge])
+    }
 
   }
 
@@ -311,6 +327,29 @@ export class Board extends Phaser.Scene {
     this.learnOpen = !this.learnOpen
     savePreferences({ ...loadPreferences(), learnPanel: this.learnOpen })
     this.dirty     = true
+
+  }
+
+
+  private tickClock() {
+    const now = Date.now()
+
+    if (!this.controller.getState().winner)
+      this.clock.tick(this.controller.actor(), now - this.lastTick)
+
+    this.lastTick = now
+
+    for (const id of ['p1', 'p2'] as const) {
+      const left = this.clock.remaining(id)
+
+      this.badges[id]?.setClock(formatClock(left), left < LOW_MS)
+    }
+
+  }
+
+
+  private logContext(): LogContext {
+    return { names: playerNames(this.config), self: HUMAN_PLAYER }
 
   }
 
@@ -353,11 +392,11 @@ export class Board extends Phaser.Scene {
     const middle     = center(button)
     const box        = this.add.graphics()
     const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
-    const label      = this.add.text(middle.x - button.h * 0.2, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
+    const label      = this.add.text(middle.x - button.h * 0.2, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.black)).setOrigin(0.5)
     const arrow      = this.add.graphics()
 
-    box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
-    drawIcon(arrow, 'play', label.x + label.width / 2 + button.h * 0.4, middle.y, button.h * 0.4, COLORS.dialog)
+    box.fillStyle(COLORS.endTurn, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
+    drawIcon(arrow, 'play', label.x + label.width / 2 + button.h * 0.4, middle.y, button.h * 0.4, COLORS.black)
     hit.on('pointerup', () => this.send(pass))
     this.layer.add([box, label, arrow, hit])
 
@@ -531,11 +570,11 @@ export class Board extends Phaser.Scene {
       return
 
     if (this.counterOpen)
-      this.showDialog('Fase counter: elegí una carta con counter', [{ label: 'No usar counter', run: () => this.send(pass) }], false)
+      this.showDialog('Fase counter: elige una carta con counter', [{ label: 'No usar counter', run: () => this.send(pass) }], false)
     else if (hasCounters)
       this.showDialog('Fase counter: ¿usar counter?', [{ label: 'Sí', run: () => this.openCounters() }, { label: 'No', run: () => this.send(pass) }], false)
     else
-      this.showDialog('Fase counter: no tenés cartas con counter', [{ label: 'Continuar', run: () => this.send(pass) }], false)
+      this.showDialog('Fase counter: no tienes cartas con counter', [{ label: 'Continuar', run: () => this.send(pass) }], false)
 
   }
 
@@ -810,7 +849,7 @@ export class Board extends Phaser.Scene {
   private leaderColor(player: PlayerId): number {
     const state = this.controller.getState()
 
-    return CARD_FACES[state.defs[state.players[player].leader.defId].colors[0]] ?? COLORS.gold
+    return LEADER_TINTS[state.defs[state.players[player].leader.defId].colors[0]] ?? COLORS.gold
 
   }
 
@@ -844,7 +883,7 @@ export class Board extends Phaser.Scene {
     if (actions.length === 1)
       this.send(actions[0])
     else if (actions.length > 1)
-      this.showDialog('Activate which effect?', actions.map(action => ({ label: describeAction(this.controller.getState(), action), run: () => this.send(action) })))
+      this.showDialog('Elige el efecto a activar', actions.map(action => ({ label: describeAction(this.controller.getState(), action), run: () => this.send(action) })))
 
   }
 
@@ -852,7 +891,7 @@ export class Board extends Phaser.Scene {
   private chooseReplacement(actions: Action[]) {
     const state = this.controller.getState()
 
-    this.showDialog('Characters are full: replace which one?', [...actions.map(action => ({ label: describeAction(state, action), run: () => this.send(action) })), { label: 'Cancel', run: () => this.closeDialog() }])
+    this.showDialog('Tienes 5 Characters: ¿cuál reemplazas?', [...actions.map(action => ({ label: describeAction(state, action), run: () => this.send(action) })), { label: 'Cancelar', run: () => this.closeDialog() }])
 
   }
 

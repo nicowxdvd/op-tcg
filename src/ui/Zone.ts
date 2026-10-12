@@ -18,8 +18,8 @@ export class Zone extends Phaser.GameObjects.Container {
     const font   = Math.max(8, Math.round(rect.h * 0.075))
     const frame  = scene.add.graphics()
 
-    frame.fillStyle(COLORS.zoneFill, 0.55).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
-    frame.lineStyle(1.5, COLORS.zoneBorder, 0.6)
+    frame.fillStyle(COLORS.zoneFill, 0.15).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
+    frame.lineStyle(1.5, COLORS.zoneLabel, 0.8)
     dashedRoundRect(frame, rect, RADIUS.zone, 5, 4)
     this.add(frame)
 

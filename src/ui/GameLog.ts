@@ -1,13 +1,18 @@
+import type { LogEntry } from '../learn/logEntry'
+
 export const LOG_WINDOW = 50
 
 
 export class GameLog {
 
-  private lines: string[] = []
+  private lines: LogEntry[] = []
   private offset = 0
 
-  add(line: string): void {
-    this.lines.push(line)
+  add(entry: LogEntry | null): void {
+    if (!entry)
+      return
+
+    this.lines.push(entry)
 
     if (this.offset > 0)
       this.offset++
@@ -21,7 +26,7 @@ export class GameLog {
   }
 
 
-  visible(): string[] {
+  visible(): LogEntry[] {
     const end = this.lines.length - this.offset
 
     return this.lines.slice(Math.max(0, end - LOG_WINDOW), end)

@@ -34,7 +34,7 @@ export class Boot extends Phaser.Scene {
     const images   = await findCardImages(Object.keys(loadDefs()), fraction => this.progress(fraction * SEARCH_SHARE))
     const donImage = await findDonImage()
 
-    await Promise.all(['400 16px Outfit', '700 16px Outfit', '400 16px Fraunces'].map(font => document.fonts.load(font))).catch(() => {})
+    await Promise.all(['400 16px Outfit', '600 16px Outfit', '700 16px Outfit', '800 16px Outfit', '400 16px Fraunces'].map(font => document.fonts.load(font))).catch(() => {})
 
     this.label.setText('Cargando imágenes...')
     preloadCardImages(this, images)

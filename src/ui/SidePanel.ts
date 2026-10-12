@@ -5,13 +5,15 @@ import type { Instruction } from './instructions'
 import type { PhaseDescription } from '../learn/describePhase'
 import type { BoardLayout, LearnLayout, Rect } from './layout'
 import { LearnPanel } from './LearnPanel'
-import { COLORS, RADIUS, textStyle } from './theme'
+import { LogView } from './LogView'
+import type { LogEntry } from '../learn/logEntry'
+import { COLORS, FONT, RADIUS, mix, textStyle } from './theme'
 
 export interface SideData {
   header: string
   banner: Instruction | null
   notice: string | null
-  log: string[]
+  log: LogEntry[]
   learn: LearnLayout
   info: PhaseDescription | null
   onToggleLearn: () => void
@@ -87,7 +89,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
   }
 
 
-  private pill(rect: Rect, label: string, color: number = COLORS.text, fill: number = COLORS.pill, border: number = COLORS.zoneBorder, ratio = 0.46, run?: () => void): void {
+  private pill(rect: Rect, label: string, color: number = COLORS.text, fill: number = COLORS.buttonDark, border: number = COLORS.buttonDark, ratio = 0.46, run?: () => void): void {
     this.box(rect, fill, 1, border)
 
     if (run)
@@ -105,16 +107,16 @@ export class SidePanel extends Phaser.GameObjects.Container {
     const btn  = high * 1.1
 
     this.pill({ x: rect.x, y: row(0), w: rect.w * 0.2, h: high }, '← Salir')
-    const title = this.scene.add.text(rect.x + rect.w * 0.43, row(0) + high / 2, header, textStyle(Math.max(10, Math.round(high * 0.5)), COLORS.white)).setOrigin(0.5)
+    const title = this.scene.add.text(rect.x + rect.w * 0.43, row(0) + high / 2, header, { ...textStyle(Math.max(10, Math.round(high * 0.5)), COLORS.text), fontStyle: FONT.semi }).setOrigin(0.5)
 
     while (title.width > rect.w * 0.44 && title.text.length > 3)
       title.setText(`${title.text.slice(0, -2)}…`)
 
     this.add(title)
-    this.pill({ x: rect.x + rect.w * 0.66, y: row(0) + high * 0.12, w: rect.w * 0.17, h: high * 0.76 }, 'BETA', COLORS.gold, COLORS.pill, COLORS.gold)
+    this.pill({ x: rect.x + rect.w * 0.66, y: row(0) + high * 0.12, w: rect.w * 0.17, h: high * 0.76 }, 'BETA', COLORS.gold, COLORS.dialog, COLORS.gold)
     this.box({ x: rect.x + rect.w - btn, y: row(0), w: btn, h: high }, COLORS.buttonDark, 1)
     this.icon('minus', rect.x + rect.w - btn / 2, row(0) + high / 2, high * 0.6)
-    this.pill({ x: rect.x, y: row(1), w: rect.w * 0.26, h: high }, 'Reiniciar', COLORS.text, COLORS.pill, COLORS.zoneBorder, 0.46, data.onRestart)
+    this.pill({ x: rect.x, y: row(1), w: rect.w * 0.26, h: high }, 'Reiniciar', COLORS.text, COLORS.buttonDark, COLORS.buttonDark, 0.46, data.onRestart)
 
     const kinds: IconKind[] = ['sound', 'moon']
 
@@ -154,8 +156,8 @@ export class SidePanel extends Phaser.GameObjects.Container {
     const pad  = rect.h * 0.12
 
     this.box(rect, COLORS.banner, 1)
-    this.add(this.scene.add.text(rect.x + pad, rect.y + pad, instruction.title, textStyle(font * 0.8, COLORS.text)).setAlpha(0.85))
-    this.add(this.scene.add.text(rect.x + pad, rect.y + pad + font * 1.4, instruction.text, { ...textStyle(font, COLORS.white), wordWrap: { width: rect.w - 2 * pad } }))
+    this.add(this.scene.add.text(rect.x + pad, rect.y + pad, instruction.title, textStyle(font * 0.8, COLORS.white)).setAlpha(0.6))
+    this.add(this.scene.add.text(rect.x + pad, rect.y + pad + font * 1.4, instruction.text, { ...textStyle(font, COLORS.text), fontStyle: FONT.semi, wordWrap: { width: rect.w - 2 * pad } }))
 
   }
 
@@ -174,17 +176,8 @@ export class SidePanel extends Phaser.GameObjects.Container {
   }
 
 
-  private drawLog(rect: Rect, lines: string[]): void {
-    const font = Math.max(9, Math.round(rect.w * 0.04))
-    const text = this.scene.add.text(rect.x + 2, rect.y + 2, lines.join('\n'), { ...textStyle(font, COLORS.text, false), wordWrap: { width: rect.w - 4 }, lineSpacing: font * 0.5 })
-    let shown  = lines
-
-    while (text.height > rect.h && shown.length > 1) {
-      shown = shown.slice(1)
-      text.setText(shown.join('\n'))
-    }
-
-    this.add(text)
+  private drawLog(rect: Rect, entries: LogEntry[]): void {
+    this.add(new LogView(this.scene, rect, entries))
 
   }
 
@@ -192,7 +185,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
   private drawReport(rect: Rect): void {
     const font = Math.max(9, Math.round(rect.h * 0.28))
 
-    this.box(rect, COLORS.crimsonDark, 0.25, COLORS.crimson)
+    this.box(rect, COLORS.lifeText, 0.1, mix(COLORS.dialog, 0xff647d, 0.4))
     this.icon('bug', rect.x + rect.w * 0.12, rect.y + rect.h / 2, rect.h * 0.4, COLORS.lifeText)
     this.add(this.scene.add.text(rect.x + rect.w * 0.2, rect.y + rect.h / 2, '¿Algo salió mal? Reportar un problema', { ...textStyle(font, COLORS.lifeText), wordWrap: { width: rect.w * 0.76 } }).setOrigin(0, 0.5))
 
@@ -200,7 +193,7 @@ export class SidePanel extends Phaser.GameObjects.Container {
 
 
   private drawConcede(rect: Rect, run: () => void): void {
-    this.pill(rect, 'Conceder', COLORS.textDim, COLORS.background, COLORS.zoneLabel, 0.3, run)
+    this.pill(rect, 'Conceder', COLORS.textDim, COLORS.buttonDark, COLORS.buttonDark, 0.3, run)
 
   }
 
