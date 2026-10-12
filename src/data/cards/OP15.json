@@ -1,0 +1,17 @@
+[
+  {
+    "card_set_id": "OP15-088",
+    "card_name": "Pirates Docking Six",
+    "card_type": "Character",
+    "card_color": "Black",
+    "card_cost": "5",
+    "card_power": "7000",
+    "counter_amount": 0,
+    "life": null,
+    "attribute": "Strike",
+    "sub_types": "Straw Hat Crew",
+    "card_text": "This Character gains +6 cost.\n[On Play] You may trash 3 cards from the top of your deck: Play up to 1 {Straw Hat Crew} type Character card with a cost of 2 or less from your trash.",
+    "card_image": "https://optcgapi.com/media/static/Card_Images/OP15-088_Y6huCMS.jpg",
+    "image_file": "cards/OP15-088.jpg"
+  }
+]

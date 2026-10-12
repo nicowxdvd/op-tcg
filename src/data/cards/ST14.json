@@ -1,0 +1,17 @@
+[
+  {
+    "card_set_id": "ST14-017",
+    "card_name": "Thousand Sunny",
+    "card_type": "Stage",
+    "card_color": "Black",
+    "card_cost": "1",
+    "card_power": null,
+    "counter_amount": 0,
+    "life": null,
+    "attribute": null,
+    "sub_types": "Straw Hat Crew",
+    "card_text": "All of your black \"Straw Hat Crew\" type Characters gain +1 cost.\n[On Play] If your Leader has the \"Straw Hat Crew\" type, draw 1 card.",
+    "card_image": "https://optcgapi.com/media/static/Card_Images/ST14-017.jpg",
+    "image_file": "cards/ST14-017.jpg"
+  }
+]
