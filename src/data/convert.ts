@@ -51,7 +51,7 @@ export function cardFromApi(card: ApiCard): CardDef {
 
   return {
     id,
-    name: card.card_name,
+    name: card.card_name.replace(/\s*\(\d{3}\)$/, ''),
     type: toType(id, card.card_type),
     cost: toNumber(id, 'card_cost', card.card_cost),
     power: toNumber(id, 'card_power', card.card_power),
