@@ -26,7 +26,7 @@ export class DonArea extends Phaser.GameObjects.Container {
     const slots = donSlots(rect, total)
     const frame = scene.add.graphics()
 
-    frame.fillStyle(COLORS.zoneFill, 0.55).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
+    frame.fillStyle(COLORS.zoneFill, 0.15).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
     frame.lineStyle(1.5, COLORS.zoneBorder, 0.6)
     dashedRoundRect(frame, rect, RADIUS.zone, 5, 4)
     this.add(frame)

@@ -3,6 +3,7 @@ import { apply } from '../../src/engine/actions'
 import { getLegalActions } from '../../src/engine'
 import { BLOCKER_ID, COUNTER_1K_ID, LEADER_ID } from '../engine/fixtures'
 import { card, inPlay, newGame, other, startGame, withPlayer } from '../engine/helpers'
+import { CHOICE_TEXTS } from '../../src/learn/texts'
 import { buildPrompt, describeAction } from '../../src/ui/prompts'
 
 
@@ -43,13 +44,23 @@ describe('buildPrompt', () => {
 
   })
 
-  it('offers Block and No block to the defender at the block step', () => {
+  it('offers Bloquear and No bloquear to the defender at the block step', () => {
     const { state, defender } = attacked()
     const prompt              = buildPrompt(state, getLegalActions(state, defender), defender)
 
-    expect(prompt?.title).toContain('Block step')
-    expect(prompt?.options.map(option => option.label)).toContain('No block')
-    expect(prompt?.options.some(option => option.label.startsWith('Block with'))).toBe(true)
+    expect(prompt?.title).toBe('Paso de bloqueo')
+    expect(prompt?.options.map(option => option.label)).toContain('No bloquear')
+    expect(prompt?.options.some(option => option.label.startsWith('Bloquear con'))).toBe(true)
+
+  })
+
+  it('titles a pending choice with the text of its kind', () => {
+    const start  = startGame()
+    const player = start.first
+    const state  = { ...start, turn: 3, active: player, pending: { player, kind: 'confirm' as const, options: [], optional: true, resume: { source: 'x', owner: player, then: [], otherwise: [], rest: [] } } }
+    const prompt = buildPrompt(state, getLegalActions(state, player), player)
+
+    expect(prompt?.title).toBe(CHOICE_TEXTS.confirm)
 
   })
 
@@ -69,8 +80,8 @@ describe('describeAction', () => {
   it('names Trigger decisions', () => {
     const { state, defender } = attacked()
 
-    expect(describeAction(state, { type: 'RevealTrigger', player: defender })).toBe('Reveal Trigger')
-    expect(describeAction(state, { type: 'PassTrigger', player: defender })).toBe('Skip Trigger')
+    expect(describeAction(state, { type: 'RevealTrigger', player: defender })).toBe('Revelar Trigger')
+    expect(describeAction(state, { type: 'PassTrigger', player: defender })).toBe('Omitir Trigger')
 
   })
 

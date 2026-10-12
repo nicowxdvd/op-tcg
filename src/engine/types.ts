@@ -175,6 +175,7 @@ export interface GameState {
   turn: number
   phase: Phase
   winner: PlayerId | null
+  conceded?: boolean
   battle: BattleState | null
   effects: EffectRegistry
   pending: PendingChoice | null
@@ -193,6 +194,7 @@ export type Action =
   | { type: 'PlayStage'; player: PlayerId; instanceId: string }
   | { type: 'AttachDon'; player: PlayerId; target: 'leader' | string }
   | { type: 'PassPhase'; player: PlayerId }
+  | { type: 'Concede'; player: PlayerId }
   | { type: 'Attack'; player: PlayerId; attacker: 'leader' | string; target: 'leader' | string }
   | { type: 'DeclareBlock'; player: PlayerId; blockerId: string }
   | { type: 'PassBlock'; player: PlayerId }

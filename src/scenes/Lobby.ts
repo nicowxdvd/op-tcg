@@ -9,7 +9,7 @@ import { audio } from '../ui/AudioManager'
 import { Button } from '../ui/Button'
 import { drawIcon } from '../ui/icons'
 import { bestTextureKey, hasCardImage, preloadCardImages } from '../ui/textures'
-import { CARD_FACES, COLORS, DIALOG_FONT, LOBBY, SERIF_FONT, css } from '../ui/theme'
+import { CARD_FACES, COLORS, DIALOG_FONT, LOBBY, SERIF_FONT, css, textResolution } from '../ui/theme'
 import { fadeIn, goTo } from '../ui/transitions'
 import { pixelRatio } from '../ui/viewport'
 
@@ -77,7 +77,7 @@ export class Lobby extends Phaser.Scene {
 
 
   private font(size: number, color: number, family = DIALOG_FONT, style = 'normal', spacing = 0): Phaser.Types.GameObjects.Text.TextStyle {
-    return { fontFamily: family, fontSize: `${Math.round(size * 10) / 10}px`, fontStyle: style, color: css(color), letterSpacing: spacing } as Phaser.Types.GameObjects.Text.TextStyle
+    return { fontFamily: family, fontSize: `${Math.round(size * 10) / 10}px`, fontStyle: style, color: css(color), letterSpacing: spacing, resolution: textResolution() } as Phaser.Types.GameObjects.Text.TextStyle
 
   }
 

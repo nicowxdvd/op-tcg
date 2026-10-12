@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser'
 import { COLORS } from './theme'
 
-export type IconKind = 'fullscreen' | 'sound' | 'moon' | 'gear' | 'bug' | 'minus' | 'order' | 'check' | 'close' | 'info' | 'play' | 'flask' | 'chevron'
+export type IconKind = 'fullscreen' | 'sound' | 'moon' | 'gear' | 'bug' | 'minus' | 'order' | 'check' | 'close' | 'info' | 'play' | 'flask' | 'chevron' | 'person'
 
 
 export function drawIcon(graphics: Phaser.GameObjects.Graphics, kind: IconKind, cx: number, cy: number, size: number, color: number = COLORS.text): void {
@@ -76,6 +76,11 @@ export function drawIcon(graphics: Phaser.GameObjects.Graphics, kind: IconKind, 
       break
     case 'chevron':
       graphics.strokePoints([[-0.5, -0.25], [0, 0.25], [0.5, -0.25]].map(([px, py]) => new Phaser.Math.Vector2(cx + r * px, cy + r * py)), false)
+      break
+    case 'person':
+      graphics.strokeCircle(cx, cy - r * 0.35, r * 0.3)
+      graphics.beginPath().arc(cx, cy + r * 0.75, r * 0.65, Math.PI, Math.PI * 2).strokePath()
+
       break
     case 'info':
       graphics.strokeCircle(cx, cy, r * 0.8)

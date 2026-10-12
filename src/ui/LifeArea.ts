@@ -19,8 +19,8 @@ export class LifeArea extends Phaser.GameObjects.Container {
     const step   = high * fan
     const frame  = scene.add.graphics()
 
-    frame.fillStyle(COLORS.crimsonDark, 0.35).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
-    frame.lineStyle(1.5, COLORS.lifeText, 0.7).strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
+    frame.fillStyle(COLORS.lifeText, 0.15).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
+    frame.lineStyle(1.5, COLORS.lifeText, 0.4).strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.zone)
     this.add(frame)
     this.add(scene.add.text(rect.x + rect.w / 2, rect.y + bar / 2 + 2, `LIFE · ${count}`, textStyle(font, COLORS.lifeText)).setOrigin(0.5))
 
