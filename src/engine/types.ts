@@ -34,6 +34,7 @@ export type EffectStep =
   | { op: 'toLife'; player: PlayerId; instanceId: string }
   | { op: 'toHand'; player: PlayerId; instanceId: string }
   | { op: 'discard'; player: PlayerId; instanceId: string }
+  | { op: 'toBottom'; target: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
   | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
   | { op: 'restDon'; player: PlayerId; amount: number }
@@ -234,6 +235,7 @@ export type GameEvent =
   | { type: 'CardSearched'; player: PlayerId; instanceId: string }
   | { type: 'CardToLife'; player: PlayerId; instanceId: string }
   | { type: 'CardToHand'; player: PlayerId; instanceId: string }
+  | { type: 'CardToDeckBottom'; player: PlayerId; instanceId: string }
   | { type: 'ChoiceRequested'; player: PlayerId; kind: ChoiceKind; options: string[] }
   | { type: 'ChoiceMade'; player: PlayerId; option: string }
   | { type: 'ChoicePassed'; player: PlayerId }

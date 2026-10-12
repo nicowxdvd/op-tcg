@@ -154,6 +154,22 @@ function toHand(state: GameState, id: PlayerId, instanceId: string, events: Game
 }
 
 
+function toBottom(state: GameState, target: string, events: GameEvent[]): GameState {
+  const found = findCharacter(state, target)
+
+  if (!found)
+    return state
+
+  const { id, character } = found
+  const player            = state.players[id]
+
+  events.push({ type: 'CardToDeckBottom', player: id, instanceId: target })
+
+  return setPlayer(state, id, { ...player, characters: player.characters.filter(candidate => candidate !== character), deck: [...player.deck, character.card], donRested: player.donRested + character.attachedDon })
+
+}
+
+
 function attachDon(state: GameState, id: PlayerId, target: string, amount: number, events: GameEvent[]): GameState {
   const player   = state.players[id]
   const isLeader = player.leader.instanceId === target
@@ -248,6 +264,8 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return discard(state, step.player, step.instanceId, events)
     case 'toHand':
       return toHand(state, step.player, step.instanceId, events)
+    case 'toBottom':
+      return toBottom(state, step.target, events)
     case 'attachDon':
       return attachDon(state, step.player, step.target, step.amount, events)
     case 'restDon':

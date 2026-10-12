@@ -229,3 +229,32 @@ describe('primitiva toHand', () => {
   })
 
 })
+
+
+describe('primitiva toBottom', () => {
+
+  it('manda el Character rival al fondo del mazo de su dueño y sus DON!! a rested', () => {
+    const state  = stage()
+    const result = run(state, { op: 'toBottom', target: 'p2-t2' })
+    const rival  = result.state.players.p2
+
+    expect(rival.characters).toEqual([])
+    expect(rival.deck.at(-1)?.instanceId).toBe('p2-t2')
+    expect(rival.deck).toHaveLength(state.players.p2.deck.length + 1)
+    expect(rival.donRested).toBe(state.players.p2.donRested + 1)
+    expect(result.events).toEqual([{ type: 'CardToDeckBottom', player: 'p2', instanceId: 'p2-t2' }])
+    expect(total(result.state, 'p2')).toBe(total(state, 'p2'))
+
+  })
+
+
+  it('sin el Character en juego no cambia nada', () => {
+    const state  = stage()
+    const result = run(state, { op: 'toBottom', target: 'nadie' })
+
+    expect(result.state.players).toEqual(state.players)
+    expect(result.events).toEqual([])
+
+  })
+
+})
