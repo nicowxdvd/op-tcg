@@ -33,8 +33,15 @@ export class FanView extends Phaser.GameObjects.Container {
 
     if (mode === 'self') {
       const pitch = slots.length > 1 ? slots[1].x - slots[0].x : card.w
+      const edge  = (card.w - pitch) / 2
+      const reach = card.h * (LIFT / 2 + 0.15 - 0.5)
 
-      this.sprites.forEach(sprite => sprite.hitWidth = pitch)
+      this.sprites.forEach((sprite, i) => {
+        sprite.hitWidth = pitch
+        sprite.hitReach = reach
+        sprite.hitLeft  = i === 0 ? edge : 0
+        sprite.hitRight = i === this.sprites.length - 1 ? edge : 0
+      })
       this.sprites.forEach(sprite => this.lift(sprite))
     }
 
@@ -81,7 +88,7 @@ export class FanView extends Phaser.GameObjects.Container {
 
     sprite.setFocus(true)
     this.bringToTop(sprite)
-    this.fitHit(sprite, this.card.w, 1 / LIFT)
+    sprite.fitHit(1 / LIFT, true)
     this.scene.tweens.killTweensOf(sprite)
     this.scene.tweens.add({ targets: sprite, y: slot.y - this.card.h * 0.15, scale: LIFT, angle: 0, duration: DURATION.hover })
 
@@ -94,21 +101,9 @@ export class FanView extends Phaser.GameObjects.Container {
 
     sprite.setFocus(false)
     this.moveTo(sprite, index)
-    this.fitHit(sprite, this.card.w, 1)
+    sprite.fitHit(1, false)
     this.scene.tweens.killTweensOf(sprite)
     this.scene.tweens.add({ targets: sprite, y: slot.y, scale: 1, angle: slot.angle, duration: DURATION.hover })
-
-  }
-
-
-  private fitHit(sprite: CardSprite, cardWidth: number, factor: number): void {
-    const area = sprite.input?.hitArea as Phaser.Geom.Rectangle | undefined
-
-    if (!area || !sprite.hitWidth)
-      return
-
-    area.width = sprite.hitWidth * factor
-    area.x     = (cardWidth - area.width) / 2
 
   }
 
