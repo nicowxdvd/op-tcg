@@ -91,6 +91,7 @@ export interface EffectDef {
   donRequired?: number
   turn?: 'yours' | 'opponents'
   oncePerTurn?: boolean
+  handCounter?: number
   cost?: EffectCost
   aura?: Aura
   condition?: (ctx: EffectContext) => boolean

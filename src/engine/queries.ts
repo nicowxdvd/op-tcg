@@ -1,7 +1,7 @@
 import type { Action, GameState, PlayerId } from './types'
 import { activateError } from './effects/activate'
 import { modifierPower } from './effects/modifiers'
-import { forcedTargets, hasKeyword, passivePower } from './effects/passive'
+import { forcedTargets, handCounter, hasKeyword, passivePower } from './effects/passive'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
@@ -51,7 +51,7 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
 
   }
 
-  const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].counter > 0)
+  const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && handCounter(state, playerId, card.instanceId) > 0)
 
   const events   = player.hand.filter(card => state.defs[card.defId].type === 'Event' && state.defs[card.defId].cost <= player.donActive && (state.effects[card.defId] ?? []).some(effect => effect.timing === 'counter'))
 

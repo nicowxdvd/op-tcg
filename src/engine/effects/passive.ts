@@ -26,6 +26,20 @@ export function forcedTargets(state: GameState, defender: PlayerId): string[] {
 }
 
 
+export function handCounter(state: GameState, owner: PlayerId, instanceId: string): number {
+  const card = state.players[owner].hand.find(candidate => candidate.instanceId === instanceId)
+
+  if (!card)
+    throw new Error(`La carta ${instanceId} no está en la mano de ${owner}`)
+
+  const source = { instanceId, defId: card.defId, owner, attachedDon: 0 }
+  const extra  = (state.effects[card.defId] ?? []).reduce((sum, effect, index) => sum + (effect.timing === 'passive' && effect.handCounter && isEligible(state, source, index, effect) ? effect.handCounter : 0), 0)
+
+  return state.defs[card.defId].counter + extra
+
+}
+
+
 export function fieldCost(state: GameState, instanceId: string): number {
   const found = fieldCards(state, 'p1').concat(fieldCards(state, 'p2')).find(candidate => candidate.instanceId === instanceId)
 

@@ -3,7 +3,7 @@ import { opponentOf, requireMain } from './state'
 import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
 import { fireEffects, resolveQueue } from './effects'
-import { forcedTargets, hasKeyword } from './effects/passive'
+import { forcedTargets, handCounter, hasKeyword } from './effects/passive'
 import { findFieldCard } from './effects/targets'
 import { queueEffects } from './effects/timing'
 
@@ -113,11 +113,14 @@ export function useCounter(state: GameState, action: UseCounterAction): ApplyRes
     throw new Error(`La carta ${action.instanceId} no está en la mano de ${action.player}`)
   if (def.type !== 'Character')
     throw new Error(`${def.name} no es un Character`)
-  if (def.counter <= 0)
+
+  const value = handCounter(state, action.player, action.instanceId)
+
+  if (value <= 0)
     throw new Error(`${def.name} no tiene counter`)
 
   const updated      = { ...player, hand: player.hand.filter(candidate => candidate !== picked), trash: [...player.trash, picked] }
-  const counterPower = battle.counterPower + def.counter
+  const counterPower = battle.counterPower + value
 
   return { state: { ...state, players: { ...state.players, [action.player]: updated }, battle: { ...battle, counterPower } }, events: [{ type: 'CounterUsed', player: action.player, instanceId: action.instanceId, counterPower }] }
 
