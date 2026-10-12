@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
+import { getLegalActions } from '../../src/engine/queries'
 import { card, inPlay, other, startGame, withPlayer } from './helpers'
 import type { GameState, PlayerId } from '../../src/engine/types'
 
@@ -141,6 +142,39 @@ describe('Attack', () => {
     apply(state, { type: 'Attack', player: id, attacker: 'leader', target: 'leader' })
 
     expect(JSON.stringify(state)).toBe(snapshot)
+
+  })
+
+})
+
+
+describe('Attack con onlyTarget', () => {
+
+  function forcedStage(): { state: GameState; id: PlayerId; rival: PlayerId } {
+    const { state, id, rival } = stage()
+    const effects              = { 'T-C03': [{ timing: 'passive' as const, aura: { onlyTarget: true }, condition: () => true, run: () => [] }] }
+
+    return { state: { ...state, effects }, id, rival }
+
+  }
+
+  it('obliga a atacar a la carta con el aura y lo quita de las acciones legales', () => {
+    const { state, id, rival } = forcedStage()
+    const attacks              = getLegalActions(state, id).filter(action => action.type === 'Attack')
+
+    expect(attacks.every(action => action.target === `${rival}-t2`)).toBe(true)
+    expect(attacks.length).toBeGreaterThan(0)
+    expect(() => apply(state, { type: 'Attack', player: id, attacker: 'leader', target: 'leader' })).toThrow(/solo puede ser atacado/)
+    expect(apply(state, { type: 'Attack', player: id, attacker: 'leader', target: `${rival}-t2` }).state.battle?.target).toBe(`${rival}-t2`)
+
+  })
+
+
+  it('no obliga si la condición del aura no se cumple', () => {
+    const { state, id } = forcedStage()
+    const free          = { ...state, effects: { 'T-C03': [{ timing: 'passive' as const, aura: { onlyTarget: true }, condition: () => false, run: () => [] }] } }
+
+    expect(apply(free, { type: 'Attack', player: id, attacker: 'leader', target: 'leader' }).state.battle?.target).toBe('leader')
 
   })
 

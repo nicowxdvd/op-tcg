@@ -3,7 +3,7 @@ import { opponentOf, requireMain } from './state'
 import { getPower, isBlockLocked } from './queries'
 import { clearModifiers } from './effects/modifiers'
 import { fireEffects, resolveQueue } from './effects'
-import { hasKeyword } from './effects/passive'
+import { forcedTargets, hasKeyword } from './effects/passive'
 import { findFieldCard } from './effects/targets'
 import { queueEffects } from './effects/timing'
 
@@ -50,6 +50,11 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.target} no está en juego del rival`)
   if (target && !target.rested)
     throw new Error(`Solo se ataca a un Character rival descansado (${action.target} está activo)`)
+
+  const forced = forcedTargets(state, opponentOf(action.player))
+
+  if (forced.length && !forced.includes(action.target))
+    throw new Error(`El rival solo puede ser atacado en ${forced.join(', ')}`)
 
   const rested = fromLeader ? { ...player, leaderRested: true } : { ...player, characters: player.characters.map(candidate => candidate === character ? { ...candidate, rested: true } : candidate) }
   const battle = { attacker: action.attacker, target: action.target, attackerPlayer: action.player, step: 'block' as const, counterPower: 0 }

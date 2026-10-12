@@ -81,6 +81,7 @@ export interface Aura {
   power?: number
   cost?: number
   keyword?: Keyword
+  onlyTarget?: boolean
   affects?: (ctx: EffectContext, candidate: string) => boolean
 
 }

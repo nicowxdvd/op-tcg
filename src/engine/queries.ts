@@ -1,7 +1,7 @@
 import type { Action, GameState, PlayerId } from './types'
 import { activateError } from './effects/activate'
 import { modifierPower } from './effects/modifiers'
-import { hasKeyword, passivePower } from './effects/passive'
+import { forcedTargets, hasKeyword, passivePower } from './effects/passive'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
@@ -13,7 +13,8 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
   const player    = state.players[playerId]
   const rival     = state.players[opponentOf(playerId)]
   const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush'))).map(character => character.card.instanceId)]
-  const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
+  const forced    = forcedTargets(state, opponentOf(playerId))
+  const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)].filter(target => !forced.length || forced.includes(target))
 
   return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
 

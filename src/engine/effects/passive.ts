@@ -1,4 +1,4 @@
-import type { EffectContext, GameState, Keyword } from '../types'
+import type { EffectContext, GameState, Keyword, PlayerId } from '../types'
 import { fieldCards } from './targets'
 import { isEligible } from './timing'
 
@@ -16,6 +16,12 @@ function auraSources(state: GameState, instanceId: string) {
 
 export function passivePower(state: GameState, instanceId: string): number {
   return auraSources(state, instanceId).reduce((sum, aura) => sum + (aura.power ?? 0), 0)
+
+}
+
+
+export function forcedTargets(state: GameState, defender: PlayerId): string[] {
+  return fieldCards(state, defender).filter(source => (state.effects[source.defId] ?? []).some((effect, index) => effect.timing === 'passive' && effect.aura?.onlyTarget && isEligible(state, source, index, effect))).map(source => source.instanceId)
 
 }
 
