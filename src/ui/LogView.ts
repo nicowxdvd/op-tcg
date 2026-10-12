@@ -4,9 +4,9 @@ import { drawIcon } from './icons'
 import type { Rect } from './layout'
 import { flow } from './logLayout'
 import type { Piece, Placed } from './logLayout'
-import { COLORS, mix, textStyle } from './theme'
+import { COLORS, FONT, textStyle } from './theme'
 
-const TEXT_COLORS: Record<SegmentKind, number> = { actor: COLORS.nameBlue, self: COLORS.gold, card: COLORS.statGold, timing: COLORS.white, dim: COLORS.textDim, text: COLORS.text }
+const TEXT_COLORS: Record<SegmentKind, number> = { actor: COLORS.nameBlue, self: COLORS.gold, card: COLORS.gold, timing: COLORS.white, dim: COLORS.textDim, text: COLORS.text }
 
 interface Laid {
   entry: LogEntry
@@ -80,7 +80,7 @@ export class LogView extends Phaser.GameObjects.Container {
 
     if (item.entry.kind === 'turn') {
       back.fillStyle(COLORS.gold, 1).fillRoundedRect(rect.x, y, rect.w, rowH, 5)
-      this.add(this.scene.add.text(rect.x + rect.w / 2, y + rowH / 2, item.entry.text, textStyle(font, COLORS.dialog)).setOrigin(0.5))
+      this.add(this.scene.add.text(rect.x + rect.w / 2, y + rowH / 2, item.entry.text, { ...textStyle(font, COLORS.dialog), fontStyle: FONT.black }).setOrigin(0.5))
 
       return
     }
@@ -93,12 +93,9 @@ export class LogView extends Phaser.GameObjects.Container {
       const top  = y + piece.row * rowH
 
       if (piece.chip) {
-        const fill = kind === 'timing' ? COLORS.banner : mix(COLORS.background, COLORS.gold, 0.22)
+        const fill = kind === 'timing' ? COLORS.timing : COLORS.buttonDark
 
         back.fillStyle(fill, 1).fillRoundedRect(x, top + rowH * 0.12, piece.w, rowH * 0.76, 4)
-
-        if (kind === 'card')
-          back.lineStyle(1, COLORS.gold, 0.6).strokeRoundedRect(x, top + rowH * 0.12, piece.w, rowH * 0.76, 4)
 
       }
 

@@ -1,22 +1,22 @@
 export const COLORS = {
-  background:   0x070b16,
-  zoneBorder:   0x6f86ad,
-  zoneFill:     0x0b1630,
-  zoneLabel:    0x7d8fb0,
-  gold:         0xf6c026,
-  crimson:      0xa3123a,
+  background:   0x0a111b,
+  zoneBorder:   0x213246,
+  zoneFill:     0x000000,
+  zoneLabel:    0x5d7088,
+  gold:         0xe8b04b,
   crimsonDark:  0x6e1030,
-  banner:       0x1f5a96,
-  pill:         0x1a2232,
-  lifeText:     0xe0405f,
+  banner:       0x00517e,
+  timing:       0x186ca6,
+  lifeText:     0xff2056,
   nameBlue:     0x4db3ff,
   white:        0xffffff,
   black:        0x000000,
-  text:         0xe8edf7,
-  textDim:      0x8fa0bf,
-  buttonDark:   0x2b3345,
+  text:         0xf4ecd8,
+  textDim:      0x9fb0c3,
+  buttonDark:   0x232730,
   veil:         0x000000,
-  dialog:       0x0d111c,
+  dialog:       0x0a0f18,
+  endTurn:      0xfe9a00,
   cardBack:     0x2c2f7a,
   cardBackLine: 0xc9a24a,
   cardBorder:   0x0a0a0a,
@@ -29,22 +29,23 @@ export const COLORS = {
   indicatorHuman: 0x3b82f6,
   indicatorCpu:   0x22c55e,
   indicatorSelf:  0xcbd5e1,
-  clockRunning:   0xf59e0b,
-  statGold:     0xffe082
+  clockRunning:   0xf59e0b
 } as const
 
 export const CARD_FACES: Record<string, number> = { Red: 0xc0392b, Green: 0x27ae60, Blue: 0x2980b9, Purple: 0x8e44ad, Black: 0x2c3e50, Yellow: 0xd4ac0d }
 
-export const FONT     = { family: '"Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif', weight: 'bold' } as const
+export const LEADER_TINTS: Record<string, number> = { Red: 0xef4444, Green: 0x22c55e, Blue: 0x3b82f6, Purple: 0xa855f7, Black: 0x64748b, Yellow: 0xeab308 }
+
+export const FONT     = { family: '"Outfit", "Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif', weight: 'bold', semi: '600', black: '800' } as const
 export const RADIUS   = { card: 6, zone: 8, panel: 14, pill: 10, button: 8 } as const
 export const SPACING  = { xs: 4, sm: 8, md: 12, lg: 20 } as const
-export const SHADOW   = { offset: 3, alpha: 0.45, glow: 0.35 } as const
+export const SHADOW   = { offset: 3, alpha: 0.45, glow: 0.24 } as const
 export const DURATION = { turn: 200, quick: 150, move: 250, hover: 70 } as const
 export const MIN_SIZE = { w: 1024, h: 600 } as const
 export const MAX_DPR  = 2
 
 export const SERIF_FONT  = '"Fraunces", Georgia, "Times New Roman", serif'
-export const DIALOG_FONT = '"Outfit", "Montserrat", "Poppins", "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+export const DIALOG_FONT: string = FONT.family
 
 
 export function css(color: number): string {

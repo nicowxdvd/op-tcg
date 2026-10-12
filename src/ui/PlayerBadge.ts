@@ -19,14 +19,14 @@ export class PlayerBadge extends Phaser.GameObjects.Container {
     const label   = active ? 'TURNO' : ''
     const reserve = active ? pill.w * 0.3 : 0
 
-    frame.fillStyle(active ? COLORS.gold : COLORS.zoneFill, 1).fillRoundedRect(pill.x, pill.y, pill.w, pill.h, RADIUS.pill)
-    frame.lineStyle(1.5, active ? COLORS.gold : COLORS.zoneBorder, 1).strokeRoundedRect(pill.x, pill.y, pill.w, pill.h, RADIUS.pill)
+    frame.fillStyle(active ? COLORS.gold : COLORS.black, active ? 1 : 0.72).fillRoundedRect(pill.x, pill.y, pill.w, pill.h, RADIUS.pill)
+    frame.lineStyle(1.5, active ? COLORS.gold : player.frame, active ? 1 : 0.85).strokeRoundedRect(pill.x, pill.y, pill.w, pill.h, RADIUS.pill)
     frame.fillStyle(player.indicator, 1).fillCircle(pill.x + pill.h * 0.5, mid, pill.h * 0.2)
-    chip.fillStyle(COLORS.zoneFill, 1).fillRoundedRect(clock.x, clock.y, clock.w, clock.h, RADIUS.pill)
-    chip.lineStyle(1, COLORS.zoneBorder, 0.8).strokeRoundedRect(clock.x, clock.y, clock.w, clock.h, RADIUS.pill)
+    chip.fillStyle(COLORS.black, 0.72).fillRoundedRect(clock.x, clock.y, clock.w, clock.h, RADIUS.pill)
+    chip.lineStyle(running ? 1.5 : 1, running ? COLORS.gold : COLORS.zoneBorder, running ? 1 : 0.8).strokeRoundedRect(clock.x, clock.y, clock.w, clock.h, RADIUS.pill)
     this.add([frame, chip])
 
-    const nameColor = active ? COLORS.dialog : COLORS.text
+    const nameColor = active ? COLORS.black : COLORS.white
     const name      = scene.add.text(pill.x + pill.h * 0.9, mid, player.name, textStyle(font, nameColor)).setOrigin(0, 0.5)
     const room      = pill.w - pill.h * 0.9 - reserve - 6
 
@@ -38,9 +38,9 @@ export class PlayerBadge extends Phaser.GameObjects.Container {
     if (label) {
       const tag = scene.add.graphics()
 
-      tag.fillStyle(COLORS.dialog, 0.85).fillRoundedRect(pill.x + pill.w - reserve - 4, pill.y + pill.h * 0.2, reserve, pill.h * 0.6, RADIUS.pill / 2)
+      tag.fillStyle(COLORS.black, 0.6).fillRoundedRect(pill.x + pill.w - reserve - 4, pill.y + pill.h * 0.2, reserve, pill.h * 0.6, RADIUS.pill / 2)
       this.add(tag)
-      this.add(scene.add.text(pill.x + pill.w - reserve / 2 - 4, mid, label, textStyle(font * 0.7, COLORS.white)).setOrigin(0.5))
+      this.add(scene.add.text(pill.x + pill.w - reserve / 2 - 4, mid, label, textStyle(font * 0.7, COLORS.text)).setOrigin(0.5))
 
     }
 

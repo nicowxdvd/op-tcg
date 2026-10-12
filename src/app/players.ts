@@ -18,16 +18,17 @@ export function playerNames(config: MatchConfig): Record<PlayerId, string> {
 export interface PlayerInfo {
   name: string
   indicator: number
+  frame: number
 
 }
 
 
-export function playersFor(config: MatchConfig): Record<PlayerId, PlayerInfo> {
+export function playersFor(config: MatchConfig, tints: Record<PlayerId, number>): Record<PlayerId, PlayerInfo> {
   const names = playerNames(config)
 
   return {
-    p1: { name: names.p1.toUpperCase(), indicator: COLORS.indicatorHuman },
-    p2: { name: names.p2.toUpperCase(), indicator: config.mode === 'cpu' ? COLORS.indicatorCpu : COLORS.indicatorSelf }
+    p1: { name: names.p1.toUpperCase(), indicator: tints.p1, frame: COLORS.indicatorHuman },
+    p2: { name: names.p2.toUpperCase(), indicator: tints.p2, frame: config.mode === 'cpu' ? COLORS.indicatorCpu : COLORS.indicatorSelf }
   }
 
 }

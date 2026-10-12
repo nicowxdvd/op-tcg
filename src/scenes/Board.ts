@@ -42,7 +42,7 @@ import { buildPrompt, describeAction, nameOf } from '../ui/prompts'
 import { buildCardBack, buildSmallCards, preloadCardImages, preloadDonImage } from '../ui/textures'
 import { pixelRatio } from '../ui/viewport'
 import { fadeIn, goTo } from '../ui/transitions'
-import { COLORS, CARD_FACES, RADIUS, textStyle } from '../ui/theme'
+import { COLORS, LEADER_TINTS, RADIUS, textStyle } from '../ui/theme'
 import { drawAttackArrow } from '../ui/AttackArrow'
 import { SidePanel } from '../ui/SidePanel'
 import { Zone } from '../ui/Zone'
@@ -292,7 +292,7 @@ export class Board extends Phaser.Scene {
   private drawFrames(active: PlayerId, rival: PlayerId) {
     const state   = this.controller.getState()
     const changed = this.lastActive !== null && this.lastActive !== active
-    const players = playersFor(this.config)
+    const players = playersFor(this.config, { p1: this.leaderColor('p1'), p2: this.leaderColor('p2') })
     const running = state.winner ? null : this.controller.actor()
     const sides   = [{ id: rival, side: this.layout.rival }, { id: this.viewer, side: this.layout.self }]
 
@@ -392,11 +392,11 @@ export class Board extends Phaser.Scene {
     const middle     = center(button)
     const box        = this.add.graphics()
     const hit        = this.add.rectangle(middle.x, middle.y, button.w, button.h, COLORS.white, 0).setInteractive({ useHandCursor: true })
-    const label      = this.add.text(middle.x - button.h * 0.2, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.dialog)).setOrigin(0.5)
+    const label      = this.add.text(middle.x - button.h * 0.2, middle.y, 'Terminar turno', textStyle(button.h * 0.4, COLORS.black)).setOrigin(0.5)
     const arrow      = this.add.graphics()
 
-    box.fillStyle(COLORS.gold, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
-    drawIcon(arrow, 'play', label.x + label.width / 2 + button.h * 0.4, middle.y, button.h * 0.4, COLORS.dialog)
+    box.fillStyle(COLORS.endTurn, 1).fillRoundedRect(button.x, button.y, button.w, button.h, RADIUS.button)
+    drawIcon(arrow, 'play', label.x + label.width / 2 + button.h * 0.4, middle.y, button.h * 0.4, COLORS.black)
     hit.on('pointerup', () => this.send(pass))
     this.layer.add([box, label, arrow, hit])
 
@@ -849,7 +849,7 @@ export class Board extends Phaser.Scene {
   private leaderColor(player: PlayerId): number {
     const state = this.controller.getState()
 
-    return CARD_FACES[state.defs[state.players[player].leader.defId].colors[0]] ?? COLORS.gold
+    return LEADER_TINTS[state.defs[state.players[player].leader.defId].colors[0]] ?? COLORS.gold
 
   }
 

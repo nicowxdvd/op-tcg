@@ -15,7 +15,7 @@ export class LearnPanel extends Phaser.GameObjects.Container {
     const wrap = { wordWrap: { width: rect.w - 2 * pad } }
     const back = scene.add.graphics()
 
-    back.fillStyle(COLORS.zoneFill, 0.9).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.button)
+    back.fillStyle(COLORS.dialog, 0.88).fillRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.button)
     back.lineStyle(1.5, COLORS.zoneBorder, 0.9).strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, RADIUS.button)
     this.add(back)
 
