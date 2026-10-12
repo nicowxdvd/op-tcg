@@ -1,15 +1,17 @@
-import type { EffectStep, GameEvent, GameState, Timing } from '../types'
+import type { EffectContext, EffectStep, GameEvent, GameState, QueuedEffect, Timing } from '../types'
 import { CHOICE } from './binding'
 import { MAX_CHARACTERS } from '../state'
 import { executeStep } from './primitives'
-import { hasTrait } from './targets'
-import { queueEffects, type EffectSource } from './timing'
+import { fieldCards, findFieldCard, hasTrait } from './targets'
+import { isEligible, queueEffects, type EffectSource } from './timing'
 
 type SearchStep = Extract<EffectStep, { op: 'search' }>
 type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
 type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
 type PlayFrom   = Extract<EffectStep, { op: 'playFrom' }>
 type FromTrash  = Extract<EffectStep, { op: 'fromTrash' }>
+type ToBottom   = Extract<EffectStep, { op: 'trashToBottom' }>
+type Removal    = Extract<EffectStep, { op: 'ko' | 'toHand' | 'toBottom' }>
 
 export type { EffectSource } from './timing'
 
@@ -92,6 +94,47 @@ function expandFromTrash(state: GameState, step: FromTrash): EffectStep[] {
 }
 
 
+function expandTrashBottom(state: GameState, step: ToBottom): EffectStep[] {
+  const options = state.players[step.player].trash.map(candidate => candidate.instanceId)
+  const more    = step.amount > 1 ? [{ ...step, amount: step.amount - 1 }] : []
+
+  if (!options.length || step.amount <= 0)
+    return []
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: false, then: [{ op: 'trashToBottom', player: step.player, amount: 1, pick: CHOICE }, ...more] }]
+
+}
+
+
+function removedId(step: Removal): string {
+  return step.op === 'toHand' ? step.instanceId : step.target
+
+}
+
+
+function expandReplacement(state: GameState, step: Removal, queued: QueuedEffect): EffectStep[] | null {
+  const targetId = removedId(step)
+  const found    = findFieldCard(state, targetId)
+
+  if (!found || found.isLeader || found.owner === queued.owner)
+    return null
+
+  for (const source of fieldCards(state, found.owner))
+    for (const [index, effect] of (state.effects[source.defId] ?? []).entries()) {
+      if (effect.timing !== 'passive' || !effect.replacement || !isEligible(state, source, index, effect))
+        continue
+
+      const ctx: EffectContext = { state, source: source.instanceId, owner: found.owner, target: targetId }
+
+      return [{ op: 'choose', chooser: found.owner, kind: 'confirm', options: [targetId], optional: true, then: effect.replacement(ctx), otherwise: [{ ...step, force: true }] }]
+
+    }
+
+  return null
+
+}
+
+
 export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
   let next = state
 
@@ -127,6 +170,25 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'fromTrash') {
         steps = [...expandFromTrash(next, step), ...others]
+
+        continue
+
+      }
+
+      if ((step.op === 'ko' || step.op === 'toHand' || step.op === 'toBottom') && !step.force) {
+        const replaced = expandReplacement(next, step, queued)
+
+        if (replaced) {
+          steps = [...replaced, ...others]
+
+          continue
+
+        }
+
+      }
+
+      if (step.op === 'trashToBottom' && step.pick === undefined) {
+        steps = [...expandTrashBottom(next, step), ...others]
 
         continue
 

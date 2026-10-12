@@ -170,6 +170,20 @@ function toBottom(state: GameState, target: string, events: GameEvent[]): GameSt
 }
 
 
+function trashToBottom(state: GameState, id: PlayerId, pick: string | undefined, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = player.trash.find(candidate => candidate.instanceId === pick)
+
+  if (!moved)
+    throw new Error(`La carta ${pick} no está en el trash de ${id}`)
+
+  events.push({ type: 'CardToDeckBottom', player: id, instanceId: moved.instanceId })
+
+  return setPlayer(state, id, { ...player, trash: player.trash.filter(candidate => candidate !== moved), deck: [...player.deck, moved] })
+
+}
+
+
 function attachDon(state: GameState, id: PlayerId, target: string, amount: number, events: GameEvent[]): GameState {
   const player   = state.players[id]
   const isLeader = player.leader.instanceId === target
@@ -266,6 +280,8 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
       return toHand(state, step.player, step.instanceId, events)
     case 'toBottom':
       return toBottom(state, step.target, events)
+    case 'trashToBottom':
+      return trashToBottom(state, step.player, step.pick, events)
     case 'attachDon':
       return attachDon(state, step.player, step.target, step.amount, events)
     case 'restDon':

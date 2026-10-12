@@ -26,15 +26,16 @@ export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
 
 export type EffectStep =
   | { op: 'draw'; player: PlayerId; amount: number }
-  | { op: 'ko'; target: string }
+  | { op: 'ko'; target: string; force?: boolean }
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
   | { op: 'search'; player: PlayerId; amount: number; type?: CardType; trait?: string; pick?: string | null; rest?: 'bottom' | 'trash' }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
-  | { op: 'toHand'; player: PlayerId; instanceId: string }
+  | { op: 'toHand'; player: PlayerId; instanceId: string; force?: boolean }
   | { op: 'discard'; player: PlayerId; instanceId: string }
-  | { op: 'toBottom'; target: string }
+  | { op: 'toBottom'; target: string; force?: boolean }
+  | { op: 'trashToBottom'; player: PlayerId; amount: number; pick?: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
   | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
   | { op: 'restDon'; player: PlayerId; amount: number }
@@ -92,6 +93,7 @@ export interface EffectDef {
   turn?: 'yours' | 'opponents'
   oncePerTurn?: boolean
   handCounter?: number
+  replacement?: (ctx: EffectContext) => EffectStep[]
   cost?: EffectCost
   aura?: Aura
   condition?: (ctx: EffectContext) => boolean
