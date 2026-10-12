@@ -179,3 +179,36 @@ describe('Attack con onlyTarget', () => {
   })
 
 })
+
+
+describe('Attack con RushCharacter', () => {
+
+  function fresh(): { state: GameState; id: PlayerId; rival: PlayerId } {
+    const { state, id, rival } = stage()
+    const mine                 = withPlayer(state, id, { characters: [inPlay(card(id, 'T-C02', 1), 3)] })
+    const defs                 = { ...mine.defs, 'T-C02': { ...mine.defs['T-C02'], keywords: ['RushCharacter' as const] } }
+
+    return { state: { ...mine, defs }, id, rival }
+
+  }
+
+  it('ataca a un Character rival descansado el turno en que entra, pero no al Leader', () => {
+    const { state, id, rival } = fresh()
+    const attacks              = getLegalActions(state, id).filter(action => action.type === 'Attack' && action.attacker === `${id}-t1`)
+
+    expect(attacks.map(action => action.type === 'Attack' && action.target)).toEqual([`${rival}-t2`])
+    expect(apply(state, { type: 'Attack', player: id, attacker: `${id}-t1`, target: `${rival}-t2` }).state.battle?.target).toBe(`${rival}-t2`)
+    expect(() => apply(state, { type: 'Attack', player: id, attacker: `${id}-t1`, target: 'leader' })).toThrow(/entró este turno/)
+
+  })
+
+
+  it('en turnos siguientes ataca también al Leader', () => {
+    const { state, id } = fresh()
+    const later         = withPlayer(state, id, { characters: [inPlay(card(id, 'T-C02', 1), 1)] })
+
+    expect(apply(later, { type: 'Attack', player: id, attacker: `${id}-t1`, target: 'leader' }).state.battle?.target).toBe('leader')
+
+  })
+
+})

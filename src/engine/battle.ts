@@ -44,7 +44,7 @@ export function attack(state: GameState, action: AttackAction): ApplyResult {
     throw new Error(`El Character ${action.attacker} no está en juego`)
   if (fromLeader ? player.leaderRested : character!.rested)
     throw new Error(`El atacante ${action.attacker} está descansado`)
-  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush'))
+  if (character && character.playedTurn === state.turn && !hasKeyword(state, character.card.instanceId, 'Rush') && !(action.target !== 'leader' && hasKeyword(state, character.card.instanceId, 'RushCharacter')))
     throw new Error(`El Character ${action.attacker} entró este turno y no puede atacar`)
   if (action.target !== 'leader' && !target)
     throw new Error(`El Character ${action.target} no está en juego del rival`)

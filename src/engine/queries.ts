@@ -12,11 +12,13 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
 
   const player    = state.players[playerId]
   const rival     = state.players[opponentOf(playerId)]
-  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush'))).map(character => character.card.instanceId)]
+  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush') || hasKeyword(state, character.card.instanceId, 'RushCharacter'))).map(character => character.card.instanceId)]
   const forced    = forcedTargets(state, opponentOf(playerId))
   const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)].filter(target => !forced.length || forced.includes(target))
 
-  return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
+  const fresh     = (attacker: string) => attacker !== 'leader' && player.characters.find(character => character.card.instanceId === attacker)!.playedTurn === state.turn && !hasKeyword(state, attacker, 'Rush')
+
+  return attackers.flatMap((attacker): Action[] => targets.filter(target => !fresh(attacker) || target !== 'leader').map(target => ({ type: 'Attack', player: playerId, attacker, target })))
 
 }
 

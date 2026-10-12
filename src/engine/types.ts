@@ -4,7 +4,7 @@ export type Phase = 'startRoll' | 'mulligan' | 'refresh' | 'draw' | 'don' | 'mai
 
 export type CardType = 'Leader' | 'Character' | 'Event' | 'Stage'
 
-export type Keyword = 'Blocker' | 'Rush' | 'DoubleAttack' | 'Banish'
+export type Keyword = 'Blocker' | 'Rush' | 'RushCharacter' | 'DoubleAttack' | 'Banish'
 
 export interface CardDef {
   id: string
