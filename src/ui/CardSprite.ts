@@ -23,6 +23,9 @@ export class CardSprite extends Phaser.GameObjects.Container {
   readonly instanceId: string | undefined
   readonly cardSize: Size
   hitWidth: number | undefined
+  hitReach = 0
+  hitLeft  = 0
+  hitRight = 0
   private marker: Phaser.GameObjects.Graphics
   private focus: Phaser.GameObjects.Graphics
 
@@ -115,11 +118,30 @@ export class CardSprite extends Phaser.GameObjects.Container {
 
   enableInput(): this {
     const { w, h } = this.cardSize
-    const width    = Math.min(this.hitWidth ?? w, w)
 
-    this.setInteractive({ hitArea: new Phaser.Geom.Rectangle((w - width) / 2, 0, width, h), hitAreaCallback: Phaser.Geom.Rectangle.Contains, useHandCursor: true })
+    this.setInteractive({ hitArea: new Phaser.Geom.Rectangle(0, 0, w, h), hitAreaCallback: Phaser.Geom.Rectangle.Contains, useHandCursor: true })
+    this.fitHit(1, false)
 
     return this
+
+  }
+
+
+  fitHit(factor: number, raised: boolean): void {
+    const area = this.input?.hitArea as Phaser.Geom.Rectangle | undefined
+
+    if (!area || !this.hitWidth)
+      return
+
+    const { w, h } = this.cardSize
+    const width    = Math.min(this.hitWidth, w) * factor
+    const left     = this.hitLeft * factor
+    const right    = this.hitRight * factor
+
+    area.x      = (w - width) / 2 - left
+    area.width  = width + left + right
+    area.y      = raised ? 0 : -this.hitReach
+    area.height = raised ? h : h + this.hitReach
 
   }
 
