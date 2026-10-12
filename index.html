@@ -2,19 +2,27 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>One Piece TCG</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:wght@400;600&display=swap" rel="stylesheet" />
     <style>
-      html, body { margin: 0; height: 100%; overflow: auto; }
+      html, body { margin: 0; height: 100%; overflow: hidden; touch-action: none; }
       html { background: radial-gradient(130% 90% at 50% 40%, #0f1a28 0%, #0a111b 55%, #05090f 100%) fixed #0a111b; }
       canvas { display: block; }
+      #rotate { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; box-sizing: border-box; background: #0a111b; color: #e8eef6; font: 600 18px Outfit, "Helvetica Neue", Arial, sans-serif; text-align: center; }
+      #rotate[hidden] { display: none; }
+      #rotate svg { width: 64px; height: 64px; animation: turn 2.4s ease-in-out infinite; }
+      @keyframes turn { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="rotate" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      <span>Girá el teléfono para jugar</span>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
