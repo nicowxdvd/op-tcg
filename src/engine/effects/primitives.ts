@@ -85,7 +85,7 @@ function setRested(state: GameState, target: string, rested: boolean, events: Ga
 }
 
 
-function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, trait: string | undefined, pick: string | null | undefined, events: GameEvent[]): GameState {
+function search(state: GameState, id: PlayerId, amount: number, type: CardType | undefined, trait: string | undefined, pick: string | null | undefined, rest: 'bottom' | 'trash', events: GameEvent[]): GameState {
   const player = state.players[id]
   const top    = player.deck.slice(0, amount)
   const found  = pick ? top.find(candidate => candidate.instanceId === pick && (!type || state.defs[candidate.defId].type === type) && (!trait || hasTrait(state.defs[candidate.defId], trait))) : undefined
@@ -93,12 +93,16 @@ function search(state: GameState, id: PlayerId, amount: number, type: CardType |
   if (pick && !found)
     throw new Error(`La carta ${pick} no está entre las ${amount} del tope o no cumple el filtro`)
 
-  const rest   = top.filter(candidate => candidate !== found)
+  const others = top.filter(candidate => candidate !== found)
 
   if (found)
     events.push({ type: 'CardSearched', player: id, instanceId: found.instanceId })
 
-  return setPlayer(state, id, { ...player, deck: [...player.deck.slice(amount), ...rest], hand: found ? [...player.hand, found] : player.hand })
+  if (rest === 'trash')
+    for (const other of others)
+      events.push({ type: 'CardDiscarded', player: id, instanceId: other.instanceId })
+
+  return setPlayer(state, id, { ...player, deck: rest === 'trash' ? player.deck.slice(amount) : [...player.deck.slice(amount), ...others], trash: rest === 'trash' ? [...player.trash, ...others] : player.trash, hand: found ? [...player.hand, found] : player.hand })
 
 }
 
@@ -146,6 +150,36 @@ function toHand(state: GameState, id: PlayerId, instanceId: string, events: Game
   events.push({ type: 'CardToHand', player: id, instanceId })
 
   return setPlayer(state, id, { ...player, life: player.life.filter(candidate => candidate !== moved), trash: player.trash.filter(candidate => candidate !== moved), characters: player.characters.filter(candidate => candidate !== character), donRested: player.donRested + (character?.attachedDon ?? 0), hand: [...player.hand, moved] })
+
+}
+
+
+function toBottom(state: GameState, target: string, events: GameEvent[]): GameState {
+  const found = findCharacter(state, target)
+
+  if (!found)
+    return state
+
+  const { id, character } = found
+  const player            = state.players[id]
+
+  events.push({ type: 'CardToDeckBottom', player: id, instanceId: target })
+
+  return setPlayer(state, id, { ...player, characters: player.characters.filter(candidate => candidate !== character), deck: [...player.deck, character.card], donRested: player.donRested + character.attachedDon })
+
+}
+
+
+function trashToBottom(state: GameState, id: PlayerId, pick: string | undefined, events: GameEvent[]): GameState {
+  const player = state.players[id]
+  const moved  = player.trash.find(candidate => candidate.instanceId === pick)
+
+  if (!moved)
+    throw new Error(`La carta ${pick} no está en el trash de ${id}`)
+
+  events.push({ type: 'CardToDeckBottom', player: id, instanceId: moved.instanceId })
+
+  return setPlayer(state, id, { ...player, trash: player.trash.filter(candidate => candidate !== moved), deck: [...player.deck, moved] })
 
 }
 
@@ -199,7 +233,7 @@ function activateDon(state: GameState, id: PlayerId, amount: number, events: Gam
 
 function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: string | undefined, events: GameEvent[]): GameState {
   const player = state.players[id]
-  const card   = player.trash.find(candidate => candidate.instanceId === instanceId)
+  const card   = player.trash.find(candidate => candidate.instanceId === instanceId) ?? player.hand.find(candidate => candidate.instanceId === instanceId)
 
   if (!card || state.defs[card.defId].type !== 'Character')
     return state
@@ -215,7 +249,7 @@ function playSelf(state: GameState, id: PlayerId, instanceId: string, replace: s
   events.push({ type: 'CharacterPlayed', player: id, instanceId })
 
   const trash = [...player.trash.filter(candidate => candidate !== card), ...(replaced ? [replaced.card] : [])]
-  const next  = setPlayer(state, id, { ...player, trash, characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
+  const next  = setPlayer(state, id, { ...player, trash, hand: player.hand.filter(candidate => candidate !== card), characters: [...player.characters.filter(candidate => candidate !== replaced), { card, rested: false, attachedDon: 0, playedTurn: state.turn }], donRested: player.donRested + (replaced?.attachedDon ?? 0) })
 
   return queueEffects(next, 'onPlay', { instanceId, defId: card.defId, owner: id, attachedDon: 0 }, events)
 
@@ -237,13 +271,17 @@ export function executeStep(state: GameState, step: EffectStep, queued: QueuedEf
     case 'activate':
       return setRested(state, step.target, false, events)
     case 'search':
-      return search(state, step.player, step.amount, step.type, step.trait, step.pick, events)
+      return search(state, step.player, step.amount, step.type, step.trait, step.pick, step.rest ?? 'bottom', events)
     case 'toLife':
       return toLife(state, step.player, step.instanceId, events)
     case 'discard':
       return discard(state, step.player, step.instanceId, events)
     case 'toHand':
       return toHand(state, step.player, step.instanceId, events)
+    case 'toBottom':
+      return toBottom(state, step.target, events)
+    case 'trashToBottom':
+      return trashToBottom(state, step.player, step.pick, events)
     case 'attachDon':
       return attachDon(state, step.player, step.target, step.amount, events)
     case 'restDon':

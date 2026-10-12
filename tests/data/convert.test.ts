@@ -100,6 +100,12 @@ describe('keywordsFromText', () => {
   })
 
 
+  it('deduce Rush: Character como keyword propio', () => {
+    expect(keywordsFromText('[Rush: Character]\n[When Attacking] Give up to 1 of your opponent\'s Characters -3000 power during this turn.')).toEqual(['RushCharacter'])
+
+  })
+
+
   it('deduce varios keywords seguidos', () => {
     expect(keywordsFromText('[Rush] (This card can attack on the turn in which it is played.) [Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)')).toEqual(['Rush', 'Blocker'])
 

@@ -7,7 +7,7 @@ export interface KeywordMatch {
 
 }
 
-const BRACKETED = ['DON!! x\\d+', 'Activate: Main', 'Once Per Turn', 'When Attacking', 'On Play', 'On K\\.O\\.', 'Trigger', 'Counter', 'Main', 'Your Turn', "Opponent's Turn", 'End of Your Turn', 'Rush', 'Blocker', 'Double Attack', 'Banish']
+const BRACKETED = ['DON!! x\\d+', 'Activate: Main', 'Once Per Turn', 'When Attacking', 'On Play', 'On K\\.O\\.', 'Trigger', 'Counter', 'Main', 'Your Turn', "Opponent's Turn", 'End of Your Turn', 'Rush: Character', 'Rush', 'Blocker', 'Double Attack', 'Banish']
 const BARE      = ['Rush', 'Blocker', 'Double Attack', 'Banish']
 const PATTERN   = new RegExp(`\\[(${BRACKETED.join('|')})\\]|\\b(${BARE.join('|')})\\b`, 'gi')
 const CANONICAL = new Map(Object.keys(KEYWORD_TEXTS).map(keyword => [keyword.toLowerCase(), keyword]))

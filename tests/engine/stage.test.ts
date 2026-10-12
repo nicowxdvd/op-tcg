@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { apply } from '../../src/engine/actions'
-import { getLegalActions } from '../../src/engine/queries'
+import { fieldCost } from '../../src/engine/effects/passive'
+import { getLegalActions, getPower } from '../../src/engine/queries'
 import { STAGE_2_ID, STAGE_ID } from './fixtures'
-import { card, startGame, withPlayer } from './helpers'
+import { card, inPlay, startGame, withPlayer } from './helpers'
 import type { Action, EffectRegistry, GameState } from '../../src/engine/types'
 
 const play: Action = { type: 'PlayStage', player: 'p1', instanceId: 'p1-t1' }
@@ -112,6 +113,35 @@ describe('getLegalActions con Stages', () => {
 
     for (const action of getLegalActions(state, 'p1').filter(candidate => candidate.type === 'PlayStage'))
       expect(() => apply(state, action)).not.toThrow()
+
+  })
+
+})
+
+
+describe('auras de una Stage', () => {
+
+  const aura = { timing: 'passive' as const, aura: { cost: 1, power: 1000, affects: (ctx: { owner: string }, candidate: string) => candidate.startsWith(ctx.owner) && candidate !== 'p1-t1' }, run: () => [] }
+
+  function inField(effects: EffectRegistry): GameState {
+    return withPlayer(withPlayer(stage(effects), 'p1', { hand: [], stage: card('p1', STAGE_ID, 1), characters: [inPlay(card('p1', 'T-C02', 7), 1)] }), 'p2', { characters: [inPlay(card('p2', 'T-C02', 8), 1)] })
+
+  }
+
+  it('la Stage en juego aplica su aura a los Characters que cumplen', () => {
+    const state = inField({ [STAGE_ID]: [aura] })
+
+    expect(fieldCost(state, 'p1-t7')).toBe(state.defs['T-C02'].cost + 1)
+    expect(fieldCost(state, 'p2-t8')).toBe(state.defs['T-C02'].cost)
+    expect(getPower(state, 'p1-t7')).toBe(state.defs['T-C02'].power + 1000)
+
+  })
+
+
+  it('sin la Stage en juego no hay aura', () => {
+    const state = withPlayer(inField({ [STAGE_ID]: [aura] }), 'p1', { stage: null })
+
+    expect(fieldCost(state, 'p1-t7')).toBe(state.defs['T-C02'].cost)
 
   })
 

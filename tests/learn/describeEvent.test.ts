@@ -34,6 +34,7 @@ const SAMPLES: { [K in GameEvent['type']]: Extract<GameEvent, { type: K }> } = {
   CardSearched: { type: 'CardSearched', player: 'p1', instanceId: mine },
   CardToLife: { type: 'CardToLife', player: 'p1', instanceId: mine },
   CardToHand: { type: 'CardToHand', player: 'p1', instanceId: mine },
+  CardToDeckBottom: { type: 'CardToDeckBottom', player: 'p1', instanceId: mine },
   ChoiceRequested: { type: 'ChoiceRequested', player: 'p1', kind: 'target', options: [mine] },
   ChoiceMade: { type: 'ChoiceMade', player: 'p1', option: mine },
   ChoicePassed: { type: 'ChoicePassed', player: 'p1' },

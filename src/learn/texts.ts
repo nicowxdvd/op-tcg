@@ -60,6 +60,7 @@ export const DURATION_NAMES: Record<Duration, string> = { thisTurn: 'este turno'
 
 export const KEYWORD_TEXTS: Record<string, string> = {
   'Rush': 'Rush: este Character puede atacar el mismo turno en que entra al juego.',
+  'Rush: Character': 'Rush: Character: este Character puede atacar a Characters rivales descansados el mismo turno en que entra al juego, pero no al Leader.',
   'Blocker': 'Blocker: cuando el rival declara un ataque, puedes descansar este Character para que reciba el ataque.',
   'Double Attack': 'Double Attack: si este ataque conecta con tu rival, le quita 2 cartas de Life en lugar de 1.',
   'Banish': 'Banish: la carta de Life que pierde el rival va al Trash y su [Trigger] no se activa.',

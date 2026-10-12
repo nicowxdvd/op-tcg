@@ -1,7 +1,7 @@
 import type { Action, GameState, PlayerId } from './types'
 import { activateError } from './effects/activate'
 import { modifierPower } from './effects/modifiers'
-import { hasKeyword, passivePower } from './effects/passive'
+import { forcedTargets, handCounter, hasKeyword, passivePower } from './effects/passive'
 import { MAX_CHARACTERS, mulliganDecider, opponentOf } from './state'
 
 export const DON_POWER = 1000
@@ -12,10 +12,13 @@ function attackActions(state: GameState, playerId: PlayerId): Action[] {
 
   const player    = state.players[playerId]
   const rival     = state.players[opponentOf(playerId)]
-  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush'))).map(character => character.card.instanceId)]
-  const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)]
+  const attackers = [...(player.leaderRested ? [] : ['leader']), ...player.characters.filter(character => !character.rested && (character.playedTurn !== state.turn || hasKeyword(state, character.card.instanceId, 'Rush') || hasKeyword(state, character.card.instanceId, 'RushCharacter'))).map(character => character.card.instanceId)]
+  const forced    = forcedTargets(state, opponentOf(playerId))
+  const targets   = ['leader', ...rival.characters.filter(character => character.rested).map(character => character.card.instanceId)].filter(target => !forced.length || forced.includes(target))
 
-  return attackers.flatMap((attacker): Action[] => targets.map(target => ({ type: 'Attack', player: playerId, attacker, target })))
+  const fresh     = (attacker: string) => attacker !== 'leader' && player.characters.find(character => character.card.instanceId === attacker)!.playedTurn === state.turn && !hasKeyword(state, attacker, 'Rush')
+
+  return attackers.flatMap((attacker): Action[] => targets.filter(target => !fresh(attacker) || target !== 'leader').map(target => ({ type: 'Attack', player: playerId, attacker, target })))
 
 }
 
@@ -48,7 +51,7 @@ function battleActions(state: GameState, playerId: PlayerId): Action[] {
 
   }
 
-  const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && state.defs[card.defId].counter > 0)
+  const counters = player.hand.filter(card => state.defs[card.defId].type === 'Character' && handCounter(state, playerId, card.instanceId) > 0)
 
   const events   = player.hand.filter(card => state.defs[card.defId].type === 'Event' && state.defs[card.defId].cost <= player.donActive && (state.effects[card.defId] ?? []).some(effect => effect.timing === 'counter'))
 

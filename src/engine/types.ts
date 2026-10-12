@@ -4,7 +4,7 @@ export type Phase = 'startRoll' | 'mulligan' | 'refresh' | 'draw' | 'don' | 'mai
 
 export type CardType = 'Leader' | 'Character' | 'Event' | 'Stage'
 
-export type Keyword = 'Blocker' | 'Rush' | 'DoubleAttack' | 'Banish'
+export type Keyword = 'Blocker' | 'Rush' | 'RushCharacter' | 'DoubleAttack' | 'Banish'
 
 export interface CardDef {
   id: string
@@ -26,21 +26,43 @@ export type Duration = 'thisTurn' | 'thisBattle' | 'permanent'
 
 export type EffectStep =
   | { op: 'draw'; player: PlayerId; amount: number }
-  | { op: 'ko'; target: string }
+  | { op: 'ko'; target: string; force?: boolean }
   | { op: 'power'; target: string; amount: number; duration: Duration }
   | { op: 'rest'; target: string }
   | { op: 'activate'; target: string }
-  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; trait?: string; pick?: string | null }
+  | { op: 'search'; player: PlayerId; amount: number; type?: CardType; trait?: string; pick?: string | null; rest?: 'bottom' | 'trash' }
   | { op: 'toLife'; player: PlayerId; instanceId: string }
-  | { op: 'toHand'; player: PlayerId; instanceId: string }
+  | { op: 'toHand'; player: PlayerId; instanceId: string; force?: boolean }
   | { op: 'discard'; player: PlayerId; instanceId: string }
+  | { op: 'toBottom'; target: string; force?: boolean }
+  | { op: 'koTotal'; player: PlayerId; max: number; pick?: string }
+  | { op: 'trashToBottom'; player: PlayerId; amount: number; pick?: string }
   | { op: 'trashFromHand'; player: PlayerId; amount: number }
   | { op: 'attachDon'; player: PlayerId; target: string; amount: number }
   | { op: 'restDon'; player: PlayerId; amount: number }
   | { op: 'activateDon'; player: PlayerId; amount: number }
   | { op: 'blockerLock'; attacker?: string; minPower?: number; duration: Duration }
   | { op: 'playSelf'; player: PlayerId; instanceId: string; replace?: string }
+  | { op: 'fromTrash'; player: PlayerId; filter?: TrashFilter }
+  | { op: 'playFrom'; player: PlayerId; from: 'hand' | 'trash'; amount: number; filter?: PlayFilter; played?: string[] }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
+
+export interface PlayFilter {
+  trait?: string
+  maxCost?: number
+  maxTotalCost?: number
+  distinctNames?: boolean
+
+}
+
+export interface TrashFilter {
+  type?: CardType
+  color?: string
+  maxCost?: number
+  name?: string
+  trait?: string
+
+}
 
 export interface EffectContext {
   state: GameState
@@ -59,7 +81,9 @@ export interface EffectCost {
 
 export interface Aura {
   power?: number
+  cost?: number
   keyword?: Keyword
+  onlyTarget?: boolean
   affects?: (ctx: EffectContext, candidate: string) => boolean
 
 }
@@ -69,6 +93,8 @@ export interface EffectDef {
   donRequired?: number
   turn?: 'yours' | 'opponents'
   oncePerTurn?: boolean
+  handCounter?: number
+  replacement?: (ctx: EffectContext) => EffectStep[]
   cost?: EffectCost
   aura?: Aura
   condition?: (ctx: EffectContext) => boolean
@@ -234,6 +260,7 @@ export type GameEvent =
   | { type: 'CardSearched'; player: PlayerId; instanceId: string }
   | { type: 'CardToLife'; player: PlayerId; instanceId: string }
   | { type: 'CardToHand'; player: PlayerId; instanceId: string }
+  | { type: 'CardToDeckBottom'; player: PlayerId; instanceId: string }
   | { type: 'ChoiceRequested'; player: PlayerId; kind: ChoiceKind; options: string[] }
   | { type: 'ChoiceMade'; player: PlayerId; option: string }
   | { type: 'ChoicePassed'; player: PlayerId }

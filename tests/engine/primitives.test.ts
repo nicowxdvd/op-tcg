@@ -132,6 +132,20 @@ describe('primitiva search', () => {
 
   })
 
+
+  it('con rest trash, las vistas que no se toman van al trash', () => {
+    const state  = deckWith(stage())
+    const result = run(state, { op: 'search', player: 'p1', amount: 3, type: 'Character', pick: 'p1-t92', rest: 'trash' })
+    const mine   = result.state.players.p1
+
+    expect(mine.hand.at(-1)?.instanceId).toBe('p1-t92')
+    expect(mine.deck.map(item => item.instanceId)).toEqual(['p1-t94'])
+    expect(mine.trash.slice(-2).map(item => item.instanceId)).toEqual(['p1-t91', 'p1-t93'])
+    expect(result.events).toEqual([{ type: 'CardSearched', player: 'p1', instanceId: 'p1-t92' }, { type: 'CardDiscarded', player: 'p1', instanceId: 'p1-t91' }, { type: 'CardDiscarded', player: 'p1', instanceId: 'p1-t93' }])
+    expect(total(result.state, 'p1')).toBe(total(state, 'p1'))
+
+  })
+
 })
 
 
@@ -211,6 +225,35 @@ describe('primitiva toHand', () => {
 
   it('lanza error con una carta que no está en esas zonas', () => {
     expect(() => run(stage(), { op: 'toHand', player: 'p1', instanceId: 'nadie' })).toThrow(/no está en la Life/)
+
+  })
+
+})
+
+
+describe('primitiva toBottom', () => {
+
+  it('manda el Character rival al fondo del mazo de su dueño y sus DON!! a rested', () => {
+    const state  = stage()
+    const result = run(state, { op: 'toBottom', target: 'p2-t2' })
+    const rival  = result.state.players.p2
+
+    expect(rival.characters).toEqual([])
+    expect(rival.deck.at(-1)?.instanceId).toBe('p2-t2')
+    expect(rival.deck).toHaveLength(state.players.p2.deck.length + 1)
+    expect(rival.donRested).toBe(state.players.p2.donRested + 1)
+    expect(result.events).toEqual([{ type: 'CardToDeckBottom', player: 'p2', instanceId: 'p2-t2' }])
+    expect(total(result.state, 'p2')).toBe(total(state, 'p2'))
+
+  })
+
+
+  it('sin el Character en juego no cambia nada', () => {
+    const state  = stage()
+    const result = run(state, { op: 'toBottom', target: 'nadie' })
+
+    expect(result.state.players).toEqual(state.players)
+    expect(result.events).toEqual([])
 
   })
 
