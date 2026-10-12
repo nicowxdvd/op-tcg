@@ -349,6 +349,59 @@ describe('primitiva playFrom', () => {
 })
 
 
+describe('primitiva fromTrash', () => {
+
+  const eventBlue: CardDef = { id: 'T-EB', name: 'Evento Azul', type: 'Event', cost: 0, power: 0, counter: 0, life: 0, colors: ['Blue'], keywords: [] }
+
+  function withTrash(trash: ReturnType<typeof card>[]): GameState {
+    const base = stage()
+
+    return withPlayer({ ...base, defs: { ...base.defs, 'T-EB': eventBlue } }, 'p1', { trash })
+
+  }
+
+  it('ofrece solo las cartas del trash que cumplen el filtro y la pasa a la mano', () => {
+    const state   = withTrash([card('p1', 'T-EB', 60), card('p1', 'T-E01', 61), card('p1', 'T-C03', 62)])
+    const pending = run(state, { op: 'fromTrash', player: 'p1', filter: { type: 'Event', color: 'Blue', maxCost: 0 } }).state
+
+    expect(pending.pending).toMatchObject({ player: 'p1', kind: 'target', optional: true })
+    expect(pending.pending?.options).toEqual(['p1-t60'])
+
+    const mine = apply(pending, { type: 'Choose', player: 'p1', option: 'p1-t60' }).state.players.p1
+
+    expect(mine.hand.at(-1)?.instanceId).toBe('p1-t60')
+    expect(mine.trash.map(item => item.instanceId)).toEqual(['p1-t61', 'p1-t62'])
+
+  })
+
+
+  it('filtra por nombre y por tipo', () => {
+    const state = withTrash([card('p1', TRAIT_ID, 60), card('p1', 'T-C03', 61)])
+
+    expect(run(state, { op: 'fromTrash', player: 'p1', filter: { name: 'Con tipos' } }).state.pending?.options).toEqual(['p1-t60'])
+    expect(run(state, { op: 'fromTrash', player: 'p1', filter: { trait: 'Supernovas' } }).state.pending?.options).toEqual(['p1-t60'])
+
+  })
+
+
+  it('permite no tomar ninguna', () => {
+    const state  = withTrash([card('p1', 'T-C03', 60)])
+    const result = apply(run(state, { op: 'fromTrash', player: 'p1' }).state, { type: 'PassChoice', player: 'p1' }).state
+
+    expect(result.pending).toBeNull()
+    expect(result.players.p1.trash).toHaveLength(1)
+
+  })
+
+
+  it('sin cartas que cumplan no pide decisión', () => {
+    expect(run(withTrash([card('p1', 'T-C03', 60)]), { op: 'fromTrash', player: 'p1', filter: { color: 'Blue' } }).state.pending).toBeNull()
+
+  })
+
+})
+
+
 describe('efectos pasivos', () => {
 
   it('un aura de power solo cuenta con los DON!! requeridos', () => {

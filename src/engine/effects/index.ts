@@ -9,6 +9,7 @@ type SearchStep = Extract<EffectStep, { op: 'search' }>
 type TrashStep  = Extract<EffectStep, { op: 'trashFromHand' }>
 type PlayStep   = Extract<EffectStep, { op: 'playSelf' }>
 type PlayFrom   = Extract<EffectStep, { op: 'playFrom' }>
+type FromTrash  = Extract<EffectStep, { op: 'fromTrash' }>
 
 export type { EffectSource } from './timing'
 
@@ -74,6 +75,23 @@ function expandPlayFrom(state: GameState, step: PlayFrom): EffectStep[] {
 }
 
 
+function expandFromTrash(state: GameState, step: FromTrash): EffectStep[] {
+  const filter  = step.filter ?? {}
+  const options = state.players[step.player].trash.filter(candidate => {
+    const def = state.defs[candidate.defId]
+
+    return (!filter.type || def.type === filter.type) && (!filter.color || def.colors.includes(filter.color)) && (filter.maxCost === undefined || def.cost <= filter.maxCost) && (!filter.name || def.name === filter.name) && (!filter.trait || hasTrait(def, filter.trait))
+
+  }).map(candidate => candidate.instanceId)
+
+  if (!options.length)
+    return []
+
+  return [{ op: 'choose', chooser: step.player, kind: 'target', options, optional: true, then: [{ op: 'toHand', player: step.player, instanceId: CHOICE }] }]
+
+}
+
+
 export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
   let next = state
 
@@ -102,6 +120,13 @@ export function resolveQueue(state: GameState, events: GameEvent[]): GameState {
 
       if (step.op === 'playFrom') {
         steps = [...expandPlayFrom(next, step), ...others]
+
+        continue
+
+      }
+
+      if (step.op === 'fromTrash') {
+        steps = [...expandFromTrash(next, step), ...others]
 
         continue
 

@@ -41,6 +41,7 @@ export type EffectStep =
   | { op: 'activateDon'; player: PlayerId; amount: number }
   | { op: 'blockerLock'; attacker?: string; minPower?: number; duration: Duration }
   | { op: 'playSelf'; player: PlayerId; instanceId: string; replace?: string }
+  | { op: 'fromTrash'; player: PlayerId; filter?: TrashFilter }
   | { op: 'playFrom'; player: PlayerId; from: 'hand' | 'trash'; amount: number; filter?: PlayFilter; played?: string[] }
   | { op: 'choose'; chooser: PlayerId; kind: ChoiceKind; options: string[]; optional: boolean; then: EffectStep[]; otherwise?: EffectStep[] }
 
@@ -49,6 +50,15 @@ export interface PlayFilter {
   maxCost?: number
   maxTotalCost?: number
   distinctNames?: boolean
+
+}
+
+export interface TrashFilter {
+  type?: CardType
+  color?: string
+  maxCost?: number
+  name?: string
+  trait?: string
 
 }
 
