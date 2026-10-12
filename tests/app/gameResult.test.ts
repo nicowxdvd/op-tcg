@@ -33,7 +33,9 @@ describe('gameResult', () => {
 
     expect(winnerLabel(result, 'cpu')).toBe('Ganó la CPU')
     expect(winnerLabel(result, 'hotseat')).toBe('Ganó el Jugador 2')
-    expect(reasonLabel(result, 'cpu')).toBe('Vos se quedó sin Life')
+    expect(reasonLabel(result, 'cpu')).toBe('Te quedaste sin Life')
+    expect(reasonLabel({ ...result, reason: 'deck' }, 'cpu')).toBe('Te quedaste sin cartas en el mazo')
+    expect(reasonLabel({ ...result, winner: 'p1' }, 'cpu')).toBe('La CPU se quedó sin Life')
     expect(reasonLabel({ ...result, reason: 'deck' }, 'hotseat')).toBe('El Jugador 1 se quedó sin cartas en el mazo')
 
   })
@@ -42,7 +44,7 @@ describe('gameResult', () => {
   it('reasonLabel describe la rendición', () => {
     const result = { winner: 'p2' as const, reason: 'concede' as const, turns: 4 }
 
-    expect(reasonLabel(result, 'cpu')).toBe('Vos se rindió')
+    expect(reasonLabel(result, 'cpu')).toBe('Te rendiste')
     expect(reasonLabel({ ...result, winner: 'p1' }, 'cpu')).toBe('La CPU se rindió')
 
   })

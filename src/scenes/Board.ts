@@ -570,11 +570,11 @@ export class Board extends Phaser.Scene {
       return
 
     if (this.counterOpen)
-      this.showDialog('Fase counter: elegí una carta con counter', [{ label: 'No usar counter', run: () => this.send(pass) }], false)
+      this.showDialog('Fase counter: elige una carta con counter', [{ label: 'No usar counter', run: () => this.send(pass) }], false)
     else if (hasCounters)
       this.showDialog('Fase counter: ¿usar counter?', [{ label: 'Sí', run: () => this.openCounters() }, { label: 'No', run: () => this.send(pass) }], false)
     else
-      this.showDialog('Fase counter: no tenés cartas con counter', [{ label: 'Continuar', run: () => this.send(pass) }], false)
+      this.showDialog('Fase counter: no tienes cartas con counter', [{ label: 'Continuar', run: () => this.send(pass) }], false)
 
   }
 
@@ -883,7 +883,7 @@ export class Board extends Phaser.Scene {
     if (actions.length === 1)
       this.send(actions[0])
     else if (actions.length > 1)
-      this.showDialog('Activate which effect?', actions.map(action => ({ label: describeAction(this.controller.getState(), action), run: () => this.send(action) })))
+      this.showDialog('Elige el efecto a activar', actions.map(action => ({ label: describeAction(this.controller.getState(), action), run: () => this.send(action) })))
 
   }
 
@@ -891,7 +891,7 @@ export class Board extends Phaser.Scene {
   private chooseReplacement(actions: Action[]) {
     const state = this.controller.getState()
 
-    this.showDialog('Characters are full: replace which one?', [...actions.map(action => ({ label: describeAction(state, action), run: () => this.send(action) })), { label: 'Cancel', run: () => this.closeDialog() }])
+    this.showDialog('Tienes 5 Characters: ¿cuál reemplazas?', [...actions.map(action => ({ label: describeAction(state, action), run: () => this.send(action) })), { label: 'Cancelar', run: () => this.closeDialog() }])
 
   }
 

@@ -1,4 +1,5 @@
 import type { Action, GameState, PlayerId } from '../engine'
+import { CHOICE_TEXTS } from '../learn/texts'
 
 export interface PromptSpec {
   title: string
@@ -48,25 +49,25 @@ export function describeAction(state: GameState, action: Action): string {
     case 'Choose':
       return nameOf(state, action.option)
     case 'PassChoice':
-      return 'Skip'
+      return 'Omitir'
     case 'DeclareBlock':
-      return `Block with ${nameOf(state, action.blockerId)}`
+      return `Bloquear con ${nameOf(state, action.blockerId)}`
     case 'PassBlock':
-      return 'No block'
+      return 'No bloquear'
     case 'UseCounter':
       return `Counter: ${nameOf(state, action.instanceId)}`
     case 'UseCounterEvent':
-      return `Counter Event: ${nameOf(state, action.instanceId)}`
+      return `Event [Counter]: ${nameOf(state, action.instanceId)}`
     case 'PassCounter':
-      return 'No counter'
+      return 'No usar Counter'
     case 'RevealTrigger':
-      return 'Reveal Trigger'
+      return 'Revelar Trigger'
     case 'PassTrigger':
-      return 'Skip Trigger'
+      return 'Omitir Trigger'
     case 'ActivateEffect':
-      return `Activate ${nameOf(state, action.source)} (effect ${action.index + 1})`
+      return `Activar ${nameOf(state, action.source)} (efecto ${action.index + 1})`
     case 'PlayCharacter':
-      return action.replaceId ? `Replace ${nameOf(state, action.replaceId)}` : `Play ${nameOf(state, action.instanceId)}`
+      return action.replaceId ? `Reemplazar a ${nameOf(state, action.replaceId)}` : `Jugar ${nameOf(state, action.instanceId)}`
     default:
       return action.type
   }
@@ -83,11 +84,11 @@ export function buildPrompt(state: GameState, legal: Action[], viewer: PlayerId)
   if (state.phase === 'mulligan')
     return { title: 'Tu mano inicial — ¿quedártela o rebarajar?', subtitle: viewer === state.first ? 'Vas primero' : 'Vas segundo', hint: 'Mulligan = rebaraja y roba 5 nuevas (una sola vez).', options: options([...legal].sort((a, b) => Number(a.type === 'Mulligan' && a.redraw) - Number(b.type === 'Mulligan' && b.redraw))) }
   if (state.pending)
-    return { title: `${viewer.toUpperCase()}: choose (${state.pending.kind})`, options: options(legal) }
+    return { title: CHOICE_TEXTS[state.pending.kind], options: options(legal) }
   if (state.battle && state.battle.attackerPlayer !== viewer && state.battle.step !== 'counter') {
-    const titles = { block: 'Block step', trigger: 'Trigger step' }
+    const titles = { block: 'Paso de bloqueo', trigger: 'Paso de Trigger' }
 
-    return { title: `${viewer.toUpperCase()}: ${titles[state.battle.step]}`, options: options(legal) }
+    return { title: titles[state.battle.step], options: options(legal) }
 
   }
 
